@@ -1,106 +1,112 @@
-import { join } from 'path';
-import { fileURLToPath } from 'url';
-import { test } from 'uvu';
-import * as assert from 'uvu/assert';
-import { remove_keys } from '../../utils/object.js';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { assert, expect, test } from 'vitest';
 import { validate_config, load_config } from './index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = join(__filename, '..');
 
+/**
+ * mutates and remove keys from an object when check callback returns true
+ * @param {Record<string, any>} o any object
+ * @param {([key, value]: [string, any]) => boolean} check callback with access
+ * 		to the key-value pair and returns a boolean that decides the deletion of key
+ */
+function remove_keys(o, check) {
+	for (const key in o) {
+		if (!Object.hasOwnProperty.call(o, key)) continue;
+		if (check([key, o[key]])) delete o[key];
+		const nested = typeof o[key] === 'object' && !Array.isArray(o[key]);
+		if (nested) remove_keys(o[key], check);
+	}
+}
+
+const directive_defaults = {
+	'child-src': undefined,
+	'default-src': undefined,
+	'frame-src': undefined,
+	'worker-src': undefined,
+	'connect-src': undefined,
+	'font-src': undefined,
+	'img-src': undefined,
+	'manifest-src': undefined,
+	'media-src': undefined,
+	'object-src': undefined,
+	'prefetch-src': undefined,
+	'script-src': undefined,
+	'script-src-elem': undefined,
+	'script-src-attr': undefined,
+	'style-src': undefined,
+	'style-src-elem': undefined,
+	'style-src-attr': undefined,
+	'base-uri': undefined,
+	sandbox: undefined,
+	'form-action': undefined,
+	'frame-ancestors': undefined,
+	'navigate-to': undefined,
+	'report-uri': undefined,
+	'report-to': undefined,
+	'require-trusted-types-for': undefined,
+	'trusted-types': undefined,
+	'upgrade-insecure-requests': false,
+	'require-sri-for': undefined,
+	'block-all-mixed-content': false,
+	'plugin-types': undefined,
+	referrer: undefined
+};
+
 const get_defaults = (prefix = '') => ({
 	extensions: ['.svelte'],
 	kit: {
 		adapter: null,
-		amp: false,
+		alias: {},
 		appDir: '_app',
-		browser: {
-			hydrate: true,
-			router: true
-		},
 		csp: {
 			mode: 'auto',
-			directives: {
-				'child-src': undefined,
-				'default-src': undefined,
-				'frame-src': undefined,
-				'worker-src': undefined,
-				'connect-src': undefined,
-				'font-src': undefined,
-				'img-src': undefined,
-				'manifest-src': undefined,
-				'media-src': undefined,
-				'object-src': undefined,
-				'prefetch-src': undefined,
-				'script-src': undefined,
-				'script-src-elem': undefined,
-				'script-src-attr': undefined,
-				'style-src': undefined,
-				'style-src-elem': undefined,
-				'style-src-attr': undefined,
-				'base-uri': undefined,
-				sandbox: undefined,
-				'form-action': undefined,
-				'frame-ancestors': undefined,
-				'navigate-to': undefined,
-				'report-uri': undefined,
-				'report-to': undefined,
-				'require-trusted-types-for': undefined,
-				'trusted-types': undefined,
-				'upgrade-insecure-requests': false,
-				'require-sri-for': undefined,
-				'block-all-mixed-content': false,
-				'plugin-types': undefined,
-				referrer: undefined
-			}
+			directives: directive_defaults,
+			reportOnly: directive_defaults
 		},
-		endpointExtensions: ['.js', '.ts'],
+		csrf: {
+			checkOrigin: true
+		},
+		embedded: false,
+		env: {
+			dir: process.cwd(),
+			publicPrefix: 'PUBLIC_',
+			privatePrefix: ''
+		},
 		files: {
 			assets: join(prefix, 'static'),
-			hooks: join(prefix, 'src/hooks'),
+			hooks: {
+				client: join(prefix, 'src/hooks.client'),
+				server: join(prefix, 'src/hooks.server')
+			},
 			lib: join(prefix, 'src/lib'),
 			params: join(prefix, 'src/params'),
 			routes: join(prefix, 'src/routes'),
 			serviceWorker: join(prefix, 'src/service-worker'),
-			template: join(prefix, 'src/app.html')
+			appTemplate: join(prefix, 'src/app.html'),
+			errorTemplate: join(prefix, 'src/error.html')
 		},
-		floc: false,
-		headers: undefined,
-		host: undefined,
-		hydrate: undefined,
 		inlineStyleThreshold: 0,
-		methodOverride: {
-			parameter: '_method',
-			allowed: []
-		},
+		moduleExtensions: ['.js', '.ts'],
+		output: { preloadStrategy: 'modulepreload' },
 		outDir: join(prefix, '.svelte-kit'),
-		package: {
-			dir: 'package',
-			emitTypes: true
-		},
 		serviceWorker: {
 			register: true
 		},
+		typescript: {},
 		paths: {
 			base: '',
-			assets: ''
+			assets: '',
+			relative: true
 		},
 		prerender: {
 			concurrency: 1,
 			crawl: true,
-			createIndexFiles: undefined,
-			default: false,
-			enabled: true,
 			entries: ['*'],
-			force: undefined,
-			onError: 'fail',
-			pages: undefined
+			origin: 'http://sveltekit-prerender'
 		},
-		protocol: undefined,
-		router: undefined,
-		ssr: undefined,
-		target: undefined,
-		trailingSlash: 'never',
 		version: {
 			name: Date.now().toString(),
 			pollInterval: 0
@@ -111,17 +117,14 @@ const get_defaults = (prefix = '') => ({
 test('fills in defaults', () => {
 	const validated = validate_config({});
 
-	assert.equal(validated.kit.package.exports(''), true);
-	assert.equal(validated.kit.package.files(''), true);
 	assert.equal(validated.kit.serviceWorker.files(''), true);
-	assert.equal(validated.kit.vite(), {});
 
 	remove_keys(validated, ([, v]) => typeof v === 'function');
 
 	const defaults = get_defaults();
 	defaults.kit.version.name = validated.kit.version.name;
 
-	assert.equal(validated, defaults);
+	expect(validated).toEqual(defaults);
 });
 
 test('errors on invalid values', () => {
@@ -149,9 +152,8 @@ test('errors on invalid nested values', () => {
 });
 
 test('does not error on invalid top-level values', () => {
-	assert.not.throws(() => {
+	assert.doesNotThrow(() => {
 		validate_config({
-			// @ts-expect-error - valid option for others but not in our definition
 			onwarn: () => {}
 		});
 	});
@@ -177,10 +179,7 @@ test('fills in partial blanks', () => {
 		}
 	});
 
-	assert.equal(validated.kit.package.exports(''), true);
-	assert.equal(validated.kit.package.files(''), true);
 	assert.equal(validated.kit.serviceWorker.files(''), true);
-	assert.equal(validated.kit.vite(), {});
 
 	remove_keys(validated, ([, v]) => typeof v === 'function');
 
@@ -188,7 +187,7 @@ test('fills in partial blanks', () => {
 	config.kit.files.assets = 'public';
 	config.kit.version.name = '0';
 
-	assert.equal(validated, config);
+	expect(validated).toEqual(config);
 });
 
 test('fails if kit.appDir is blank', () => {
@@ -236,6 +235,7 @@ test('fails if paths.base is not root-relative', () => {
 		validate_config({
 			kit: {
 				paths: {
+					// @ts-expect-error
 					base: 'https://example.com/somewhere/else'
 				}
 			}
@@ -260,6 +260,7 @@ test('fails if paths.assets is relative', () => {
 		validate_config({
 			kit: {
 				paths: {
+					// @ts-expect-error
 					assets: 'foo'
 				}
 			}
@@ -294,19 +295,18 @@ test('fails if prerender.entries are invalid', () => {
 
 /**
  * @param {string} name
- * @param {{ base?: string, assets?: string }} input
- * @param {{ base?: string, assets?: string }} output
+ * @param {import('@sveltejs/kit').KitConfig['paths']} input
+ * @param {import('@sveltejs/kit').KitConfig['paths']} output
  */
 function validate_paths(name, input, output) {
 	test(name, () => {
-		assert.equal(
+		expect(
 			validate_config({
 				kit: {
 					paths: input
 				}
-			}).kit.paths,
-			output
-		);
+			}).kit.paths
+		).toEqual(output);
 	});
 }
 
@@ -317,7 +317,8 @@ validate_paths(
 	},
 	{
 		base: '/path/to/base',
-		assets: ''
+		assets: '',
+		relative: true
 	}
 );
 
@@ -328,7 +329,8 @@ validate_paths(
 	},
 	{
 		base: '',
-		assets: 'https://cdn.example.com'
+		assets: 'https://cdn.example.com',
+		relative: true
 	}
 );
 
@@ -340,7 +342,8 @@ validate_paths(
 	},
 	{
 		base: '/path/to/base',
-		assets: 'https://cdn.example.com'
+		assets: 'https://cdn.example.com',
+		relative: true
 	}
 );
 
@@ -353,7 +356,7 @@ test('load default config (esm)', async () => {
 	const defaults = get_defaults(cwd + '/');
 	defaults.kit.version.name = config.kit.version.name;
 
-	assert.equal(config, defaults);
+	expect(config).toEqual(defaults);
 });
 
 test('errors on loading config with incorrect default export', async () => {
@@ -371,5 +374,3 @@ test('errors on loading config with incorrect default export', async () => {
 		'svelte.config.js must have a configuration object as its default export. See https://kit.svelte.dev/docs/configuration'
 	);
 });
-
-test.run();

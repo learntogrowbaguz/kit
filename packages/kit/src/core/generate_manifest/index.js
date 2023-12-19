@@ -1,117 +1,122 @@
 import { s } from '../../utils/misc.js';
-import { parse_route_id } from '../../utils/routing.js';
 import { get_mime_lookup } from '../utils.js';
+import { resolve_symlinks } from '../../exports/vite/build/utils.js';
+import { compact } from '../../utils/array.js';
+import { join_relative } from '../../utils/filesystem.js';
+import { dedent } from '../sync/utils.js';
 
 /**
+ * Generates the data used to write the server-side manifest.js file. This data is used in the Vite
+ * build process, to power routing, etc.
  * @param {{
  *   build_data: import('types').BuildData;
  *   relative_path: string;
  *   routes: import('types').RouteData[];
- *   format?: 'esm' | 'cjs'
  * }} opts
  */
-export function generate_manifest({ build_data, relative_path, routes, format = 'esm' }) {
-	/** @typedef {{ index: number, path: string }} LookupEntry */
-	/** @type {Map<string, LookupEntry>} */
-	const bundled_nodes = new Map();
+export function generate_manifest({ build_data, relative_path, routes }) {
+	/**
+	 * @type {Map<any, number>} The new index of each node in the filtered nodes array
+	 */
+	const reindexed = new Map();
+	/**
+	 * All nodes actually used in the routes definition (prerendered routes are omitted).
+	 * Root layout/error is always included as they are needed for 404 and root errors.
+	 * @type {Set<any>}
+	 */
+	const used_nodes = new Set([0, 1]);
 
-	// 0 and 1 are special, they correspond to the root layout and root error nodes
-	bundled_nodes.set(build_data.manifest_data.components[0], {
-		path: `${relative_path}/nodes/0.js`,
-		index: 0
-	});
-
-	bundled_nodes.set(build_data.manifest_data.components[1], {
-		path: `${relative_path}/nodes/1.js`,
-		index: 1
-	});
-
-	routes.forEach((route) => {
-		if (route.type === 'page') {
-			[...route.a, ...route.b].forEach((component) => {
-				if (component && !bundled_nodes.has(component)) {
-					const i = build_data.manifest_data.components.indexOf(component);
-
-					bundled_nodes.set(component, {
-						path: `${relative_path}/nodes/${i}.js`,
-						index: bundled_nodes.size
-					});
-				}
-			});
+	for (const route of routes) {
+		if (route.page) {
+			for (const i of route.page.layouts) used_nodes.add(i);
+			for (const i of route.page.errors) used_nodes.add(i);
+			used_nodes.add(route.page.leaf);
 		}
-	});
+	}
+
+	const node_paths = compact(
+		build_data.manifest_data.nodes.map((_, i) => {
+			if (used_nodes.has(i)) {
+				reindexed.set(i, reindexed.size);
+				return join_relative(relative_path, `/nodes/${i}.js`);
+			}
+		})
+	);
 
 	/** @type {(path: string) => string} */
-	const load =
-		format === 'esm'
-			? (path) => `import('${path}')`
-			: (path) => `Promise.resolve().then(() => require('${path}'))`;
-
-	/** @type {(path: string) => string} */
-	const loader = (path) => `() => ${load(path)}`;
+	const loader = (path) => `__memo(() => import('${path}'))`;
 
 	const assets = build_data.manifest_data.assets.map((asset) => asset.file);
 	if (build_data.service_worker) {
 		assets.push(build_data.service_worker);
 	}
 
-	/** @param {string | undefined} id */
-	const get_index = (id) => id && /** @type {LookupEntry} */ (bundled_nodes.get(id)).index;
-
 	const matchers = new Set();
 
+	/** @param {Array<number | undefined>} indexes */
+	function get_nodes(indexes) {
+		const string = indexes.map((n) => reindexed.get(n) ?? '').join(',');
+
+		// since JavaScript ignores trailing commas, we need to insert a dummy
+		// comma so that the array has the correct length if the last item
+		// is undefined
+		return `[${string},]`;
+	}
+
 	// prettier-ignore
-	return `{
-		appDir: ${s(build_data.app_dir)},
-		assets: new Set(${s(assets)}),
-		mimeTypes: ${s(get_mime_lookup(build_data.manifest_data))},
-		_: {
-			entry: ${s(build_data.client.entry)},
-			nodes: [
-				${Array.from(bundled_nodes.values()).map(node => loader(node.path)).join(',\n\t\t\t\t')}
-			],
-			routes: [
-				${routes.map(route => {
-					const { pattern, names, types } = parse_route_id(route.id);
+	// String representation of
+	/** @template {import('@sveltejs/kit').SSRManifest} T */
+	const manifest_expr = dedent`
+		{
+			appDir: ${s(build_data.app_dir)},
+			appPath: ${s(build_data.app_path)},
+			assets: new Set(${s(assets)}),
+			mimeTypes: ${s(get_mime_lookup(build_data.manifest_data))},
+			_: {
+				client: ${s(build_data.client)},
+				nodes: [
+					${(node_paths).map(loader).join(',\n')}
+				],
+				routes: [
+					${routes.map(route => {
+						if (!route.page && !route.endpoint) return;
+						
+						route.params.forEach(param => {
+							if (param.matcher) matchers.add(param.matcher);
+						});
 
-					types.forEach(type => {
-						if (type) matchers.add(type);
-					});
-
-					if (route.type === 'page') {
-						return `{
-							type: 'page',
-							id: ${s(route.id)},
-							pattern: ${pattern},
-							names: ${s(names)},
-							types: ${s(types)},
-							path: ${route.path ? s(route.path) : null},
-							shadow: ${route.shadow ? loader(`${relative_path}/${build_data.server.vite_manifest[route.shadow].file}`) : null},
-							a: ${s(route.a.map(get_index))},
-							b: ${s(route.b.map(get_index))}
-						}`.replace(/^\t\t/gm, '');
-					} else {
-						if (!build_data.server.vite_manifest[route.file]) {
-							// this is necessary in cases where a .css file snuck in —
-							// perhaps it would be better to disallow these (and others?)
-							return null;
-						}
-
-						return `{
-							type: 'endpoint',
-							id: ${s(route.id)},
-							pattern: ${pattern},
-							names: ${s(names)},
-							types: ${s(types)},
-							load: ${loader(`${relative_path}/${build_data.server.vite_manifest[route.file].file}`)}
-						}`.replace(/^\t\t/gm, '');
-					}
-				}).filter(Boolean).join(',\n\t\t\t\t')}
-			],
-			matchers: async () => {
-				${Array.from(matchers).map(type => `const { match: ${type} } = await ${load(`${relative_path}/entries/matchers/${type}.js`)}`).join('\n\t\t\t\t')}
-				return { ${Array.from(matchers).join(', ')} };
+						return dedent`
+							{
+								id: ${s(route.id)},
+								pattern: ${route.pattern},
+								params: ${s(route.params)},
+								page: ${route.page ? `{ layouts: ${get_nodes(route.page.layouts)}, errors: ${get_nodes(route.page.errors)}, leaf: ${reindexed.get(route.page.leaf)} }` : 'null'},
+								endpoint: ${route.endpoint ? loader(join_relative(relative_path, resolve_symlinks(build_data.server_manifest, route.endpoint.file).chunk.file)) : 'null'}
+							}
+						`;
+					}).filter(Boolean).join(',\n')}
+				],
+				matchers: async () => {
+					${Array.from(
+						matchers, 
+						type => `const { match: ${type} } = await import ('${(join_relative(relative_path, `/entries/matchers/${type}.js`))}')`
+					).join('\n')}
+					return { ${Array.from(matchers).join(', ')} };
+				}
 			}
 		}
-	}`.replace(/^\t/gm, '');
+	`;
+
+	// Memoize the loaders to prevent Node from doing unnecessary work
+	// on every dynamic import call
+	return dedent`
+		(() => {
+		function __memo(fn) {
+			let value;
+			return () => value ??= (value = fn());
+		}
+
+		return ${manifest_expr}
+		})()
+	`;
 }

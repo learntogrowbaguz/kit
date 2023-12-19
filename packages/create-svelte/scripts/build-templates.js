@@ -1,5 +1,5 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import parser from 'gitignore-parser';
 import prettier from 'prettier';
 import { transform } from 'sucrase';
@@ -7,12 +7,19 @@ import glob from 'tiny-glob/sync.js';
 import { mkdirp, rimraf } from '../utils.js';
 
 /** @param {string} content */
-function convert_typescript(content) {
-	const transformed = transform(content, {
-		transforms: ['typescript']
+async function convert_typescript(content) {
+	let { code } = transform(content, {
+		transforms: ['typescript'],
+		disableESTransforms: true
 	});
 
-	return prettier.format(transformed.code, {
+	// sucrase leaves invalid class fields intact
+	code = code.replace(/^\s*[a-z]+;$/gm, '');
+
+	// Prettier strips 'unnecessary' parens from .ts files, we need to hack them back in
+	code = code.replace(/(\/\*\* @type.+? \*\/) (.+?) \/\*\*\*\//g, '$1($2)');
+
+	return await prettier.format(code, {
 		parser: 'babel',
 		useTabs: true,
 		singleQuote: true,
@@ -23,7 +30,18 @@ function convert_typescript(content) {
 
 /** @param {string} content */
 function strip_jsdoc(content) {
-	return content.replace(/\/\*\*[\s\S]+?\*\/[\s\n]+/g, '');
+	return content
+		.replace(/ \/\*\*\*\//g, '')
+		.replace(
+			/\/\*\*([\s\S]+?)(@[\s\S]+?)?\*\/([\s\n]+)/g,
+			(match, description, tags, whitespace) => {
+				if (/^\s+(\*\s*)?$/.test(description)) {
+					return '';
+				}
+
+				return `/**${description.replace(/\* $/, '')}*/${whitespace}`;
+			}
+		);
 }
 
 /** @param {Set<string>} shared */
@@ -31,6 +49,8 @@ async function generate_templates(shared) {
 	const templates = fs.readdirSync('templates');
 
 	for (const template of templates) {
+		if (template[0] === '.') continue;
+
 		const dir = `dist/templates/${template}`;
 		const assets = `${dir}/assets`;
 		mkdirp(assets);
@@ -38,7 +58,10 @@ async function generate_templates(shared) {
 		const cwd = path.resolve('templates', template);
 
 		const gitignore_file = path.join(cwd, '.gitignore');
-		if (!fs.existsSync(gitignore_file)) throw new Error('Template must have a .gitignore file');
+		if (!fs.existsSync(gitignore_file)) {
+			throw new Error(`"${template}" template must have a .gitignore file`);
+		}
+
 		const gitignore = parser.compile(fs.readFileSync(gitignore_file, 'utf-8'));
 
 		const ignore_file = path.join(cwd, '.ignore');
@@ -55,7 +78,8 @@ async function generate_templates(shared) {
 			null: []
 		};
 
-		glob('**/*', { cwd, filesOnly: true, dot: true }).forEach((name) => {
+		const files = glob('**/*', { cwd, filesOnly: true, dot: true });
+		for (const name of files) {
 			// the package.template.json thing is a bit annoying — basically we want
 			// to be able to develop and deploy the app from here, but have a different
 			// package.json in newly created projects (based on package.template.json)
@@ -64,14 +88,14 @@ async function generate_templates(shared) {
 				// TODO package-specific versions
 				contents = contents.replace(/workspace:\*/g, 'next');
 				fs.writeFileSync(`${dir}/package.json`, contents);
-				return;
+				continue;
 			}
 
 			// ignore files that are written conditionally
-			if (shared.has(name)) return;
+			if (shared.has(name)) continue;
 
 			// ignore contents of .gitignore or .ignore
-			if (!gitignore.accepts(name) || !ignore.accepts(name) || name === '.ignore') return;
+			if (!gitignore.accepts(name) || !ignore.accepts(name) || name === '.ignore') continue;
 
 			if (/\.(ts|svelte)$/.test(name)) {
 				const contents = fs.readFileSync(path.join(cwd, name), 'utf8');
@@ -80,7 +104,7 @@ async function generate_templates(shared) {
 					if (name.endsWith('app.d.ts')) types.checkjs.push({ name, contents });
 					types.typescript.push({ name, contents });
 				} else if (name.endsWith('.ts')) {
-					const js = convert_typescript(contents);
+					const js = await convert_typescript(contents);
 
 					types.typescript.push({
 						name,
@@ -102,9 +126,14 @@ async function generate_templates(shared) {
 					// possible (e.g. preserving double line breaks). Sucrase is the best
 					// tool for the job because it just removes the types; Prettier then
 					// tidies up the end result
-					const js_contents = contents.replace(
+					const js_contents = await replace_async(
+						contents,
 						/<script([^>]+)>([\s\S]+?)<\/script>/g,
-						(m, attrs, typescript) => {
+						async (
+							/** @type {any} */ m,
+							/** @type {string} */ attrs,
+							/** @type {string} */ typescript
+						) => {
 							// Sucrase assumes 'unused' imports (which _are_ used, but only
 							// in the markup) are type imports, and strips them. This step
 							// prevents it from drawing that conclusion
@@ -122,17 +151,19 @@ async function generate_templates(shared) {
 							const suffix = `\n${imports.join(',')}`;
 
 							const transformed = transform(typescript + suffix, {
-								transforms: ['typescript']
+								transforms: ['typescript'],
+								disableESTransforms: true
 							}).code.slice(0, -suffix.length);
 
-							const contents = prettier
-								.format(transformed, {
+							const contents = (
+								await prettier.format(transformed, {
 									parser: 'babel',
 									useTabs: true,
 									singleQuote: true,
 									trailingComma: 'none',
 									printWidth: 100
 								})
+							)
 								.trim()
 								.replace(/^(.)/gm, '\t$1');
 
@@ -160,7 +191,7 @@ async function generate_templates(shared) {
 				mkdirp(path.dirname(dest));
 				fs.copyFileSync(path.join(cwd, name), dest);
 			}
-		});
+		}
 
 		fs.copyFileSync(meta_file, `${dir}/meta.json`);
 		fs.writeFileSync(
@@ -172,6 +203,20 @@ async function generate_templates(shared) {
 	}
 }
 
+/**
+ * @param {string} string
+ * @param {RegExp} regexp
+ * @param {{ (m: any, attrs: string, typescript: string): Promise<string>; (arg0: any): any; }} replacer
+ */
+async function replace_async(string, regexp, replacer) {
+	const replacements = await Promise.all(
+		// @ts-ignore
+		Array.from(string.matchAll(regexp), (match) => replacer(...match))
+	);
+	let i = 0;
+	return string.replace(regexp, () => replacements[i++]);
+}
+
 async function generate_shared() {
 	const cwd = path.resolve('shared');
 
@@ -181,7 +226,8 @@ async function generate_shared() {
 	/** @type {Array<{ name: string, include: string[], exclude: string[], contents: string }>} */
 	const files = [];
 
-	glob('**/*', { cwd, filesOnly: true, dot: true }).forEach((file) => {
+	const globbed = glob('**/*', { cwd, filesOnly: true, dot: true });
+	for (const file of globbed) {
 		const contents = fs.readFileSync(path.join(cwd, file), 'utf8');
 
 		/** @type {string[]} */
@@ -195,7 +241,7 @@ async function generate_shared() {
 		if (file.startsWith('+') || file.startsWith('-')) {
 			const [conditions, ...rest] = file.split(path.sep);
 
-			const pattern = /([+-])([a-z]+)/g;
+			const pattern = /([+-])([a-z0-9]+)/g;
 			let match;
 			while ((match = pattern.exec(conditions))) {
 				const set = match[1] === '+' ? include : exclude;
@@ -206,23 +252,42 @@ async function generate_shared() {
 		}
 
 		if (name.endsWith('.ts') && !include.includes('typescript')) {
+			// file includes types in TypeScript and JSDoc —
+			// create .js file, with and without JSDoc
+			const js = await convert_typescript(contents);
 			const js_name = name.replace(/\.ts$/, '.js');
-			shared.add(js_name);
 
+			// typescript
 			files.push({
-				name: js_name,
-				include: [...include],
-				exclude: [...exclude, 'typescript'],
-				contents: convert_typescript(contents)
+				name,
+				include: [...include, 'typescript'],
+				exclude,
+				contents: strip_jsdoc(contents)
 			});
 
-			include.push('typescript');
+			// checkjs
+			files.push({
+				name: js_name,
+				include: [...include, 'checkjs'],
+				exclude,
+				contents: js
+			});
+
+			// no typechecking
+			files.push({
+				name: js_name,
+				include,
+				exclude: [...exclude, 'typescript', 'checkjs'],
+				contents: strip_jsdoc(js)
+			});
+
+			shared.add(name);
+			shared.add(js_name);
+		} else {
+			shared.add(name);
+			files.push({ name, include, exclude, contents });
 		}
-
-		shared.add(name);
-
-		files.push({ name, include, exclude, contents });
-	});
+	}
 
 	files.sort((a, b) => a.include.length + a.exclude.length - (b.include.length + b.exclude.length));
 

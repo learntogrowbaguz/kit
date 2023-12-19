@@ -1,10 +1,13 @@
-declare module 'SERVER' {
-	export { Server } from '@sveltejs/kit';
-}
+import { Cache, CacheStorage, IncomingRequestCfProperties } from '@cloudflare/workers-types';
 
-declare module 'MANIFEST' {
-	import { SSRManifest } from '@sveltejs/kit';
-
-	export const manifest: SSRManifest;
-	export const prerendered: Set<string>;
+declare global {
+	namespace App {
+		export interface Platform {
+			context?: {
+				waitUntil(promise: Promise<any>): void;
+			};
+			caches?: CacheStorage & { default: Cache };
+			cf?: IncomingRequestCfProperties;
+		}
+	}
 }

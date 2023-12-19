@@ -1,24 +1,19 @@
-declare namespace App {
-	interface Locals {
-		answer: number;
-		name: string;
-		key: string;
-		params: Record<string, string>;
-	}
+declare global {
+	namespace App {
+		interface Locals {
+			answer: number;
+			name?: string;
+			key: string;
+			params: Record<string, string>;
+			url?: URL;
+		}
 
-	interface Platform {}
+		interface PageState {
+			active: boolean;
+		}
 
-	interface Session {
-		answer: number;
-		calls: number;
-	}
-
-	interface Stuff {
-		message: string;
-		error: string;
-		page: string;
-		value: number;
-		x: string;
-		y: string;
+		interface Platform {}
 	}
 }
+
+export {};

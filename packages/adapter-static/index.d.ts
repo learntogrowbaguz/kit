@@ -1,11 +1,11 @@
 import { Adapter } from '@sveltejs/kit';
 
-interface AdapterOptions {
+export interface AdapterOptions {
 	pages?: string;
 	assets?: string;
 	fallback?: string;
 	precompress?: boolean;
+	strict?: boolean;
 }
 
-declare function plugin(options?: AdapterOptions): Adapter;
-export = plugin;
+export default function plugin(options?: AdapterOptions): Adapter;

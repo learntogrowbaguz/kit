@@ -1,10 +1,10 @@
-import fs from 'fs';
-import http from 'http';
-import * as ports from 'port-authority';
-import { test as base } from '@playwright/test';
+import fs from 'node:fs';
+import http from 'node:http';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { test as base, devices } from '@playwright/test';
 
 export const test = base.extend({
-	// @ts-expect-error
 	app: async ({ page }, use) => {
 		// these are assumed to have been put in the global scope by the layout
 		use({
@@ -34,95 +34,91 @@ export const test = base.extend({
 				page.evaluate((/** @type {(url: URL) => any} */ fn) => beforeNavigate(fn), fn),
 
 			/**
-			 * @param {() => void} fn
 			 * @returns {Promise<void>}
 			 */
 			afterNavigate: () => page.evaluate(() => afterNavigate(() => {})),
 
 			/**
+			 * @param {string[]} urls
+			 * @returns {Promise<void>}
+			 */
+			preloadCode: (...urls) => page.evaluate((urls) => preloadCode(...urls), urls),
+
+			/**
 			 * @param {string} url
 			 * @returns {Promise<void>}
 			 */
-			prefetch: (url) => page.evaluate((/** @type {string} */ url) => prefetch(url), url),
-
-			/**
-			 * @param {string[]} [urls]
-			 * @returns {Promise<void>}
-			 */
-			prefetchRoutes: (urls) =>
-				page.evaluate((/** @type {string[]} */ urls) => prefetchRoutes(urls), urls)
+			preloadData: (url) => page.evaluate((/** @type {string} */ url) => preloadData(url), url)
 		});
 	},
 
-	// @ts-expect-error
-	back: async ({ page, javaScriptEnabled }, use) => {
-		use(async () => {
-			if (javaScriptEnabled) {
-				await Promise.all([page.goBack(), page.evaluate(() => window.navigated)]);
-			} else {
-				return page.goBack().then(() => void 0);
-			}
-		});
-	},
-
-	// @ts-expect-error
 	clicknav: async ({ page, javaScriptEnabled }, use) => {
 		/**
 		 * @param {string} selector
 		 * @param {{ timeout: number }} options
 		 */
 		async function clicknav(selector, options) {
+			const element = page.locator(selector);
 			if (javaScriptEnabled) {
-				await Promise.all([page.waitForNavigation(options), page.click(selector)]);
+				await Promise.all([page.waitForNavigation(options), element.click()]);
 			} else {
-				await page.click(selector);
+				await element.click();
 			}
 		}
 
 		use(clicknav);
 	},
 
-	// @ts-expect-error
 	in_view: async ({ page }, use) => {
 		/** @param {string} selector */
 		async function in_view(selector) {
 			const box = await page.locator(selector).boundingBox();
-			const view = await page.viewportSize();
+			const view = page.viewportSize();
 			return box && view && box.y < view.height && box.y + box.height > 0;
 		}
 
 		use(in_view);
 	},
 
-	page: async ({ page, javaScriptEnabled }, use) => {
-		if (javaScriptEnabled) {
-			page.addInitScript({
-				content: `
-					addEventListener('sveltekit:start', () => {
-						document.body.classList.add('started');
-					});
-				`
-			});
+	get_computed_style: async ({ page }, use) => {
+		/**
+		 * @param {string} selector
+		 * @param {string} prop
+		 */
+		async function get_computed_style(selector, prop) {
+			return page.$eval(
+				selector,
+				(node, prop) => window.getComputedStyle(node).getPropertyValue(prop),
+				prop
+			);
 		}
 
-		const goto = page.goto;
-		page.goto =
-			/**
-			 * @param {string} url
-			 * @param {object}	opts
-			 */
-			async function (url, opts) {
-				const res = await goto.call(page, url, opts);
-				if (javaScriptEnabled) {
-					await page.waitForSelector('body.started', { timeout: 5000 });
+		await use(get_computed_style);
+	},
+
+	page: async ({ page, javaScriptEnabled }, use) => {
+		// automatically wait for kit started event after navigation functions if js is enabled
+		const page_navigation_functions = ['goto', 'goBack', 'reload'];
+		page_navigation_functions.forEach((fn) => {
+			// @ts-expect-error
+			const page_fn = page[fn];
+			if (!page_fn) {
+				throw new Error(`function does not exist on page: ${fn}`);
+			}
+			// @ts-expect-error
+			page[fn] = async function (...args) {
+				const res = await page_fn.call(page, ...args);
+				if (javaScriptEnabled && args[1]?.wait_for_started !== false) {
+					await page.waitForSelector('body.started', { timeout: 15000 });
 				}
 				return res;
 			};
+		});
+
 		await use(page);
 	},
 
-	// @ts-expect-error
-	// eslint-disable-next-line
+	// eslint-disable-next-line no-empty-pattern
 	read_errors: ({}, use) => {
 		/** @param {string} path */
 		function read_errors(path) {
@@ -133,8 +129,112 @@ export const test = base.extend({
 		}
 
 		use(read_errors);
+	},
+
+	// eslint-disable-next-line no-empty-pattern
+	start_server: async ({}, use) => {
+		/**
+		 * @type {http.Server}
+		 */
+		let server;
+
+		/**
+		 * @type {Set<import('net').Socket>}
+		 */
+		let sockets;
+
+		/**
+		 * @param {(req: http.IncomingMessage, res: http.ServerResponse) => void} handler
+		 */
+		async function start_server(handler) {
+			if (server) {
+				throw new Error('server already started');
+			}
+			server = http.createServer(handler);
+
+			await new Promise((fulfil) => {
+				server.listen(0, 'localhost', () => {
+					fulfil(undefined);
+				});
+			});
+
+			const { port } = /** @type {import('net').AddressInfo} */ (server.address());
+			if (!port) {
+				throw new Error(`Could not find port from server ${JSON.stringify(server.address())}`);
+			}
+			sockets = new Set();
+			server.on('connection', (socket) => {
+				sockets.add(socket);
+				socket.on('close', () => {
+					sockets.delete(socket);
+				});
+			});
+			return {
+				port
+			};
+		}
+		await use(start_server);
+
+		// @ts-expect-error use before set
+		if (server) {
+			// @ts-expect-error use before set
+			if (sockets) {
+				sockets.forEach((socket) => {
+					if (!socket.destroyed) {
+						socket.destroy();
+					}
+				});
+			}
+
+			await new Promise((fulfil, reject) => {
+				server.close((err) => {
+					if (err) {
+						reject(err);
+					} else {
+						fulfil(undefined);
+					}
+				});
+			});
+		}
+	},
+
+	// make sure context fixture depends on start server, so setup/teardown order is
+	// setup start_server
+	// setup context
+	// teardown context
+	// teardown start_server
+	async context({ context, start_server }, use) {
+		// just here make sure start_server is referenced, don't call
+		if (!start_server) {
+			throw new Error('start_server fixture not present');
+		}
+		await use(context);
+		try {
+			await context.close();
+		} catch (e) {
+			console.error('failed to close context fixture', e);
+		}
 	}
 });
+
+const known_devices = {
+	chromium: devices['Desktop Chrome'],
+	firefox: devices['Desktop Firefox'],
+	webkit: devices['Desktop Safari']
+};
+const test_browser = /** @type {keyof typeof known_devices} */ (
+	process.env.KIT_E2E_BROWSER ?? 'chromium'
+);
+
+const test_browser_device = known_devices[test_browser];
+
+if (!test_browser_device) {
+	throw new Error(
+		`invalid test browser specified: KIT_E2E_BROWSER=${
+			process.env.KIT_E2E_BROWSER
+		}. Allowed values: ${Object.keys(known_devices).join(', ')}`
+	);
+}
 
 /** @type {import('@playwright/test').PlaywrightTestConfig} */
 export const config = {
@@ -142,48 +242,36 @@ export const config = {
 	// generous timeouts on CI
 	timeout: process.env.CI ? 45000 : 15000,
 	webServer: {
-		command: process.env.DEV ? 'npm run dev' : 'npm run build && npm run preview',
-		port: 3000
+		command: process.env.DEV ? 'pnpm dev' : 'pnpm build && pnpm preview',
+		port: process.env.DEV ? 5173 : 4173
 	},
-	retries: process.env.CI ? 5 : 0,
+	retries: process.env.CI ? 2 : 0,
 	projects: [
 		{
-			name: `${process.env.DEV ? 'dev' : 'build'}+js`,
+			name: `${test_browser}-${process.env.DEV ? 'dev' : 'build'}`,
 			use: {
 				javaScriptEnabled: true
 			}
 		},
 		{
-			name: `${process.env.DEV ? 'dev' : 'build'}-js`,
+			name: `${test_browser}-${process.env.DEV ? 'dev' : 'build'}-no-js`,
 			use: {
 				javaScriptEnabled: false
 			}
 		}
 	],
 	use: {
+		...test_browser_device,
 		screenshot: 'only-on-failure',
-		trace: 'retain-on-failure',
-		// use stable chrome from host OS instead of downloading one
-		// see https://playwright.dev/docs/browsers#google-chrome--microsoft-edge
-		channel: 'chrome'
+		trace: 'retain-on-failure'
 	},
-	workers: process.env.CI ? 2 : undefined
+	workers: process.env.CI ? 2 : undefined,
+	reporter: process.env.CI
+		? [
+				['dot'],
+				[path.resolve(fileURLToPath(import.meta.url), '../github-flaky-warning-reporter.js')]
+			]
+		: 'list',
+	testDir: 'test',
+	testMatch: /(.+\.)?(test|spec)\.[jt]s/
 };
-
-/**
- *
- * @param {(req: http.IncomingMessage, res: http.ServerResponse) => void} handler
- * @param {number} [start]
- * @returns
- */
-export async function start_server(handler, start = 4000) {
-	const port = await ports.find(start);
-
-	const server = http.createServer(handler);
-
-	await new Promise((fulfil) => {
-		server.listen(port, () => fulfil(undefined));
-	});
-
-	return { port, server };
-}

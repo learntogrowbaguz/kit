@@ -1,57 +1,109 @@
-import fs from 'fs';
-import path from 'path';
-import * as url from 'url';
-import { logger } from '../utils.js';
+import fs from 'node:fs';
+import path from 'node:path';
+import * as url from 'node:url';
 import options from './options.js';
 
 /**
+ * Loads the template (src/app.html by default) and validates that it has the
+ * required content.
  * @param {string} cwd
  * @param {import('types').ValidatedConfig} config
  */
-export function load_template(cwd, config) {
-	const { template } = config.kit.files;
-	const relative = path.relative(cwd, template);
+export function load_template(cwd, { kit }) {
+	const { env, files } = kit;
 
-	if (fs.existsSync(template)) {
-		const contents = fs.readFileSync(template, 'utf8');
-		const expected_tags = ['%svelte.head%', '%svelte.body%'];
-		expected_tags.forEach((tag) => {
-			if (contents.indexOf(tag) === -1) {
-				throw new Error(`${relative} is missing ${tag}`);
-			}
-		});
-	} else {
+	const relative = path.relative(cwd, files.appTemplate);
+
+	if (!fs.existsSync(files.appTemplate)) {
 		throw new Error(`${relative} does not exist`);
 	}
 
-	return fs.readFileSync(template, 'utf-8');
+	const contents = fs.readFileSync(files.appTemplate, 'utf8');
+
+	const expected_tags = ['%sveltekit.head%', '%sveltekit.body%'];
+	expected_tags.forEach((tag) => {
+		if (contents.indexOf(tag) === -1) {
+			throw new Error(`${relative} is missing ${tag}`);
+		}
+	});
+
+	for (const match of contents.matchAll(/%sveltekit\.env\.([^%]+)%/g)) {
+		if (!match[1].startsWith(env.publicPrefix)) {
+			throw new Error(
+				`Environment variables in ${relative} must start with ${env.publicPrefix} (saw %sveltekit.env.${match[1]}%)`
+			);
+		}
+	}
+
+	return contents;
 }
 
+/**
+ * Loads the error page (src/error.html by default) if it exists.
+ * Falls back to a generic error page content.
+ * @param {import('types').ValidatedConfig} config
+ */
+export function load_error_page(config) {
+	let { errorTemplate } = config.kit.files;
+
+	// Don't do this inside resolving the config, because that would mean
+	// adding/removing error.html isn't detected and would require a restart.
+	if (!fs.existsSync(config.kit.files.errorTemplate)) {
+		errorTemplate = url.fileURLToPath(new URL('./default-error.html', import.meta.url));
+	}
+
+	return fs.readFileSync(errorTemplate, 'utf-8');
+}
+
+/**
+ * Loads and validates svelte.config.js
+ * @param {{ cwd?: string }} options
+ * @returns {Promise<import('types').ValidatedConfig>}
+ */
 export async function load_config({ cwd = process.cwd() } = {}) {
 	const config_file = path.join(cwd, 'svelte.config.js');
 
 	if (!fs.existsSync(config_file)) {
-		throw new Error(
-			'You need to create a svelte.config.js file. See https://kit.svelte.dev/docs/configuration'
-		);
+		return process_config({}, { cwd });
 	}
 
 	const config = await import(`${url.pathToFileURL(config_file).href}?ts=${Date.now()}`);
 
-	const validated = validate_config(config.default);
+	try {
+		return process_config(config.default, { cwd });
+	} catch (e) {
+		const error = /** @type {Error} */ (e);
+
+		// redact the stack trace — it's not helpful to users
+		error.stack = `Could not load svelte.config.js: ${error.message}\n`;
+		throw error;
+	}
+}
+
+/**
+ * @param {import('@sveltejs/kit').Config} config
+ * @returns {import('types').ValidatedConfig}
+ */
+function process_config(config, { cwd = process.cwd() } = {}) {
+	const validated = validate_config(config);
 
 	validated.kit.outDir = path.resolve(cwd, validated.kit.outDir);
 
 	for (const key in validated.kit.files) {
-		// @ts-expect-error this is typescript at its stupidest
-		validated.kit.files[key] = path.resolve(cwd, validated.kit.files[key]);
+		if (key === 'hooks') {
+			validated.kit.files.hooks.client = path.resolve(cwd, validated.kit.files.hooks.client);
+			validated.kit.files.hooks.server = path.resolve(cwd, validated.kit.files.hooks.server);
+		} else {
+			// @ts-expect-error
+			validated.kit.files[key] = path.resolve(cwd, validated.kit.files[key]);
+		}
 	}
 
 	return validated;
 }
 
 /**
- * @param {import('types').Config} config
+ * @param {import('@sveltejs/kit').Config} config
  * @returns {import('types').ValidatedConfig}
  */
 export function validate_config(config) {
@@ -62,19 +114,4 @@ export function validate_config(config) {
 	}
 
 	return options(config, 'config');
-}
-
-/**
- * @param {string[]} conflicts - array of conflicts in dotted notation
- * @param {string=} pathPrefix - prepended in front of the path
- * @param {string=} scope - used to prefix the whole error message
- */
-export function print_config_conflicts(conflicts, pathPrefix = '', scope) {
-	const prefix = scope ? scope + ': ' : '';
-	const log = logger({ verbose: false });
-	conflicts.forEach((conflict) => {
-		log.error(
-			`${prefix}The value for ${pathPrefix}${conflict} specified in svelte.config.js has been ignored. This option is controlled by SvelteKit.`
-		);
-	});
 }

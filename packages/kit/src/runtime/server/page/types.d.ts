@@ -1,22 +1,36 @@
-import { JSONValue, NormalizedLoadOutput, ResponseHeaders, SSRNode } from 'types';
+import { CookieSerializeOptions } from 'cookie';
+import { SSRNode, CspDirectives, ServerDataNode } from 'types';
 
-export type Fetched = {
+export interface Fetched {
 	url: string;
-	body?: string | null;
-	response: {
-		status: number;
-		statusText: string;
-		headers: ResponseHeaders;
-		body: string;
-	};
-};
+	method: string;
+	request_body?: string | ArrayBufferView | null;
+	request_headers?: HeadersInit | undefined;
+	response_body: string;
+	response: Response;
+	is_b64?: boolean;
+}
 
 export type Loaded = {
 	node: SSRNode;
-	props: JSONValue | undefined;
-	loaded: NormalizedLoadOutput;
-	stuff: Record<string, any>;
-	fetched: Fetched[];
-	set_cookie_headers: string[];
-	uses_credentials: boolean;
+	data: Record<string, any> | null;
+	server_data: ServerDataNode | null;
 };
+
+type CspMode = 'hash' | 'nonce' | 'auto';
+
+export interface CspConfig {
+	mode: CspMode;
+	directives: CspDirectives;
+	reportOnly: CspDirectives;
+}
+
+export interface CspOpts {
+	prerender: boolean;
+}
+
+export interface Cookie {
+	name: string;
+	value: string;
+	options: CookieSerializeOptions & { path: string };
+}

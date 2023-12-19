@@ -1,36 +1,10 @@
-/** @param {Record<string, any>} obj */
-export function lowercase_keys(obj) {
-	/** @type {Record<string, any>} */
-	const clone = {};
-
-	for (const key in obj) {
-		clone[key.toLowerCase()] = obj[key];
-	}
-
-	return clone;
-}
-
-/** @param {Record<string, string>} params */
-export function decode_params(params) {
-	for (const key in params) {
-		// input has already been decoded by decodeURI
-		// now handle the rest that decodeURIComponent would do
-		params[key] = params[key]
-			.replace(/%23/g, '#')
-			.replace(/%3[Bb]/g, ';')
-			.replace(/%2[Cc]/g, ',')
-			.replace(/%2[Ff]/g, '/')
-			.replace(/%3[Ff]/g, '?')
-			.replace(/%3[Aa]/g, ':')
-			.replace(/%40/g, '@')
-			.replace(/%26/g, '&')
-			.replace(/%3[Dd]/g, '=')
-			.replace(/%2[Bb]/g, '+')
-			.replace(/%24/g, '$');
-	}
-
-	return params;
-}
+import { DEV } from 'esm-env';
+import { json, text } from '../../exports/index.js';
+import { coalesce_to_error, get_message, get_status } from '../../utils/error.js';
+import { negotiate } from '../../utils/http.js';
+import { HttpError } from '../control.js';
+import { fix_stack_trace } from '../shared-server.js';
+import { ENDPOINT_METHODS } from '../../constants.js';
 
 /** @param {any} body */
 export function is_pojo(body) {
@@ -38,20 +12,167 @@ export function is_pojo(body) {
 
 	if (body) {
 		if (body instanceof Uint8Array) return false;
-
-		// body could be a node Readable, but we don't want to import
-		// node built-ins, so we use duck typing
-		if (body._readableState && typeof body.pipe === 'function') return false;
-
-		// similarly, it could be a web ReadableStream
-		if (typeof ReadableStream !== 'undefined' && body instanceof ReadableStream) return false;
+		if (body instanceof ReadableStream) return false;
 	}
 
 	return true;
 }
 
-/** @param {import('types').RequestEvent} event */
-export function normalize_request_method(event) {
-	const method = event.request.method.toLowerCase();
-	return method === 'delete' ? 'del' : method; // 'delete' is a reserved word
+/**
+ * @param {Partial<Record<import('types').HttpMethod, any>>} mod
+ * @param {import('types').HttpMethod} method
+ */
+export function method_not_allowed(mod, method) {
+	return text(`${method} method not allowed`, {
+		status: 405,
+		headers: {
+			// https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/405
+			// "The server must generate an Allow header field in a 405 status code response"
+			allow: allowed_methods(mod).join(', ')
+		}
+	});
+}
+
+/** @param {Partial<Record<import('types').HttpMethod, any>>} mod */
+export function allowed_methods(mod) {
+	const allowed = ENDPOINT_METHODS.filter((method) => method in mod);
+
+	if ('GET' in mod || 'HEAD' in mod) allowed.push('HEAD');
+
+	return allowed;
+}
+
+/**
+ * Return as a response that renders the error.html
+ *
+ * @param {import('types').SSROptions} options
+ * @param {number} status
+ * @param {string} message
+ */
+export function static_error_page(options, status, message) {
+	let page = options.templates.error({ status, message });
+
+	if (DEV) {
+		// inject Vite HMR client, for easier debugging
+		page = page.replace('</head>', '<script type="module" src="/@vite/client"></script></head>');
+	}
+
+	return text(page, {
+		headers: { 'content-type': 'text/html; charset=utf-8' },
+		status
+	});
+}
+
+/**
+ * @param {import('@sveltejs/kit').RequestEvent} event
+ * @param {import('types').SSROptions} options
+ * @param {unknown} error
+ */
+export async function handle_fatal_error(event, options, error) {
+	error = error instanceof HttpError ? error : coalesce_to_error(error);
+	const status = get_status(error);
+	const body = await handle_error_and_jsonify(event, options, error);
+
+	// ideally we'd use sec-fetch-dest instead, but Safari — quelle surprise — doesn't support it
+	const type = negotiate(event.request.headers.get('accept') || 'text/html', [
+		'application/json',
+		'text/html'
+	]);
+
+	if (event.isDataRequest || type === 'application/json') {
+		return json(body, {
+			status
+		});
+	}
+
+	return static_error_page(options, status, body.message);
+}
+
+/**
+ * @param {import('@sveltejs/kit').RequestEvent} event
+ * @param {import('types').SSROptions} options
+ * @param {any} error
+ * @returns {Promise<App.Error>}
+ */
+export async function handle_error_and_jsonify(event, options, error) {
+	if (error instanceof HttpError) {
+		return error.body;
+	}
+
+	if (__SVELTEKIT_DEV__ && typeof error == 'object') {
+		fix_stack_trace(error);
+	}
+
+	const status = get_status(error);
+	const message = get_message(error);
+
+	return (await options.hooks.handleError({ error, event, status, message })) ?? { message };
+}
+
+/**
+ * @param {number} status
+ * @param {string} location
+ */
+export function redirect_response(status, location) {
+	const response = new Response(undefined, {
+		status,
+		headers: { location }
+	});
+	return response;
+}
+
+/**
+ * @param {import('@sveltejs/kit').RequestEvent} event
+ * @param {Error & { path: string }} error
+ */
+export function clarify_devalue_error(event, error) {
+	if (error.path) {
+		return `Data returned from \`load\` while rendering ${event.route.id} is not serializable: ${error.message} (data${error.path})`;
+	}
+
+	if (error.path === '') {
+		return `Data returned from \`load\` while rendering ${event.route.id} is not a plain object`;
+	}
+
+	// belt and braces — this should never happen
+	return error.message;
+}
+
+/**
+ * @param {import('types').ServerDataNode} node
+ */
+export function stringify_uses(node) {
+	const uses = [];
+
+	if (node.uses && node.uses.dependencies.size > 0) {
+		uses.push(`"dependencies":${JSON.stringify(Array.from(node.uses.dependencies))}`);
+	}
+
+	if (node.uses && node.uses.search_params.size > 0) {
+		uses.push(`"search_params":${JSON.stringify(Array.from(node.uses.search_params))}`);
+	}
+
+	if (node.uses && node.uses.params.size > 0) {
+		uses.push(`"params":${JSON.stringify(Array.from(node.uses.params))}`);
+	}
+
+	if (node.uses?.parent) uses.push('"parent":1');
+	if (node.uses?.route) uses.push('"route":1');
+	if (node.uses?.url) uses.push('"url":1');
+
+	return `"uses":{${uses.join(',')}}`;
+}
+
+/**
+ * @param {string} message
+ * @param {number} offset
+ */
+export function warn_with_callsite(message, offset = 0) {
+	if (DEV) {
+		const stack = fix_stack_trace(new Error()).split('\n');
+		const line = stack.at(3 + offset);
+		message += `\n${line}`;
+	}
+
+	console.warn(message);
 }

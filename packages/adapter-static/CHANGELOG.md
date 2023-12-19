@@ -1,5 +1,209 @@
 # @sveltejs/adapter-static
 
+## 3.0.0
+
+### Major Changes
+
+- breaking: update SvelteKit peer dependency to version 2 ([#11277](https://github.com/sveltejs/kit/pull/11277))
+
+## 2.0.3
+
+### Patch Changes
+
+- fix: correctly list dynamic routes in error log ([#10443](https://github.com/sveltejs/kit/pull/10443))
+
+## 2.0.2
+
+### Patch Changes
+
+- fix: update broken link in error message ([`118ce5a0`](https://github.com/sveltejs/kit/commit/118ce5a07a3a984353c3fc858b34c67e9e560fa0))
+
+- Updated dependencies [[`748a8720`](https://github.com/sveltejs/kit/commit/748a8720fea8ea938576041207b81e19bb8f7dff)]:
+  - @sveltejs/kit@1.15.3
+
+## 2.0.1
+
+### Patch Changes
+
+- fix: generate fallback page before compressing ([#8972](https://github.com/sveltejs/kit/pull/8972))
+
+- Updated dependencies [[`0abb8ebf`](https://github.com/sveltejs/kit/commit/0abb8ebffc6121f81c2bbfa0a0f68866d4cc1627), [`bef54f63`](https://github.com/sveltejs/kit/commit/bef54f63d2315066d30e8f1bcf471ddf2bd72c35), [`51cd6e64`](https://github.com/sveltejs/kit/commit/51cd6e643178e3a113fc2c3e8a63755bcbfe902d), [`930c8e4e`](https://github.com/sveltejs/kit/commit/930c8e4ee2e3046ed1b622777dafa23029a19fe5), [`ee8066fc`](https://github.com/sveltejs/kit/commit/ee8066fcb29ed1e7e3ab513cabb7997e38c984f2), [`49d2ec62`](https://github.com/sveltejs/kit/commit/49d2ec62e6385694f11701bf2fa411d07449344c), [`eb943565`](https://github.com/sveltejs/kit/commit/eb943565a4324dbed3da5a581924ca91a24366de)]:
+  - @sveltejs/kit@1.5.3
+
+## 2.0.0
+
+### Major Changes
+
+- breaking: bump `@sveltejs/kit` peer dependency ([#8740](https://github.com/sveltejs/kit/pull/8740))
+
+### Patch Changes
+
+- Updated dependencies [[`c7648f66`](https://github.com/sveltejs/kit/commit/c7648f6608a413e2654625cbd30f890d2148cf13), [`63613bf1`](https://github.com/sveltejs/kit/commit/63613bf194c18ce50e111585ad770fc93f9e43c7), [`d1f7655e`](https://github.com/sveltejs/kit/commit/d1f7655efdff70d91f94fe0cb0de50ed2511b5e5)]:
+  - @sveltejs/kit@1.5.0
+
+## 1.0.6
+
+### Patch Changes
+
+- docs: fix link in README ([#8854](https://github.com/sveltejs/kit/pull/8854))
+
+- Updated dependencies [[`7cdb7a65`](https://github.com/sveltejs/kit/commit/7cdb7a65819342c6d334c79defc697d531d5cbf4)]:
+  - @sveltejs/kit@1.3.10
+
+## 1.0.5
+
+### Patch Changes
+
+- docs: move adapter docs to site ([#8531](https://github.com/sveltejs/kit/pull/8531))
+
+## 1.0.4
+
+### Patch Changes
+
+- fix: publish missing files ([#8532](https://github.com/sveltejs/kit/pull/8532))
+
+## 1.0.3
+
+### Patch Changes
+
+- chore: remove superfluous main field from package.json ([#8519](https://github.com/sveltejs/kit/pull/8519))
+
+- Updated dependencies [[`7e2d3405`](https://github.com/sveltejs/kit/commit/7e2d34056e99f371e22406d941b764df365a2649)]:
+  - @sveltejs/kit@1.1.1
+
+## 1.0.2
+
+### Patch Changes
+
+- docs: clarify that you can build SPAs with adapter-static ([#8502](https://github.com/sveltejs/kit/pull/8502))
+
+## 1.0.1
+
+### Patch Changes
+
+- fix: match `adapter-vercel` logic for serving prerendered content ([#8332](https://github.com/sveltejs/kit/pull/8332))
+
+## 1.0.0
+
+### Major Changes
+
+First major release, see below for the history of changes that lead up to this.
+Starting from now all releases follow semver and changes will be listed as Major/Minor/Patch
+
+## 1.0.0-next.50
+
+### Patch Changes
+
+- chore: add peerDependencies, add more specific next version ([#8141](https://github.com/sveltejs/kit/pull/8141))
+
+## 1.0.0-next.49
+
+### Patch Changes
+
+- breaking: replace automatic fallback generation with `builder.generateFallback(fallback)` ([#8013](https://github.com/sveltejs/kit/pull/8013))
+
+## 1.0.0-next.48
+
+### Patch Changes
+
+- Update README ([#7480](https://github.com/sveltejs/kit/pull/7480))
+
+## 1.0.0-next.47
+
+### Patch Changes
+
+- update dependencies ([#7355](https://github.com/sveltejs/kit/pull/7355))
+
+## 1.0.0-next.46
+
+### Patch Changes
+
+- Make options object optional ([#7341](https://github.com/sveltejs/kit/pull/7341))
+
+## 1.0.0-next.45
+
+### Patch Changes
+
+- feat: more info about prerendering errors, add strict option to adapter-static ([#7264](https://github.com/sveltejs/kit/pull/7264))
+
+## 1.0.0-next.44
+
+### Patch Changes
+
+- fix error message ([#7108](https://github.com/sveltejs/kit/pull/7108))
+
+## 1.0.0-next.43
+
+### Patch Changes
+
+- Improve performance by compressing in parallel ([#6710](https://github.com/sveltejs/kit/pull/6710))
+
+## 1.0.0-next.42
+
+### Patch Changes
+
+- docs: more specific error message when prerendering fails ([#6577](https://github.com/sveltejs/kit/pull/6577))
+
+## 1.0.0-next.41
+
+### Patch Changes
+
+- Better error when encountering not-fully-prerenderable routes ([#6474](https://github.com/sveltejs/kit/pull/6474))
+
+## 1.0.0-next.40
+
+### Patch Changes
+
+- breaking: require all routes to be prerenderable when not using fallback option ([#6392](https://github.com/sveltejs/kit/pull/6392))
+
+## 1.0.0-next.39
+
+### Patch Changes
+
+- Move `compress` logic to `Builder` API ([#5822](https://github.com/sveltejs/kit/pull/5822))
+
+## 1.0.0-next.38
+
+### Patch Changes
+
+- breaking: remove writeStatic to align with Vite ([#5618](https://github.com/sveltejs/kit/pull/5618))
+
+## 1.0.0-next.37
+
+### Patch Changes
+
+- breaking: Throws when correctly configured to run as a static site of a SPA ([#5562](https://github.com/sveltejs/kit/pull/5562))
+
+## 1.0.0-next.36
+
+### Patch Changes
+
+- Remove ENABLE_VC_BUILD check, use v3 build output API for all apps deployed to Vercel ([#5514](https://github.com/sveltejs/kit/pull/5514))
+
+## 1.0.0-next.35
+
+### Patch Changes
+
+- chore: upgrade TypeScript to 4.7.4 ([#5414](https://github.com/sveltejs/kit/pull/5414))
+
+## 1.0.0-next.34
+
+### Patch Changes
+
+- Update dependencies ([#5121](https://github.com/sveltejs/kit/pull/5121))
+
+## 1.0.0-next.33
+
+### Patch Changes
+
+- Update adapter entrypoint typings to be NodeNext/ESNext-compatible ([#5111](https://github.com/sveltejs/kit/pull/5111))
+
+## 1.0.0-next.32
+
+### Patch Changes
+
+- Add types to pkg.exports ([#5045](https://github.com/sveltejs/kit/pull/5045))
+
 ## 1.0.0-next.31
 
 ### Patch Changes
@@ -16,13 +220,13 @@
 
 ### Patch Changes
 
-- [breaking] replace builder.prerender() with builder.writePrerendered() and builder.prerendered ([#4192](https://github.com/sveltejs/kit/pull/4192)) ([#4229](https://github.com/sveltejs/kit/pull/4229))
+- breaking: replace builder.prerender() with builder.writePrerendered() and builder.prerendered ([#4192](https://github.com/sveltejs/kit/pull/4192)) ([#4229](https://github.com/sveltejs/kit/pull/4229))
 
 ## 1.0.0-next.28
 
 ### Patch Changes
 
-- [breaking] remove `createIndexFiles` option, derive from `trailingSlash` instead ([#3801](https://github.com/sveltejs/kit/pull/3801))
+- breaking: remove `createIndexFiles` option, derive from `trailingSlash` instead ([#3801](https://github.com/sveltejs/kit/pull/3801))
 
 ## 1.0.0-next.27
 
@@ -40,7 +244,7 @@
 
 ### Patch Changes
 
-- [chore] update dependency sirv to v2 ([#3263](https://github.com/sveltejs/kit/pull/3263))
+- chore: update dependency sirv to v2 ([#3263](https://github.com/sveltejs/kit/pull/3263))
 
 ## 1.0.0-next.24
 
@@ -70,19 +274,19 @@
 
 ### Patch Changes
 
-- [chore] upgrade to Svelte 3.43.0" ([#2474](https://github.com/sveltejs/kit/pull/2474))
+- chore: upgrade to Svelte 3.43.0" ([#2474](https://github.com/sveltejs/kit/pull/2474))
 
 ## 1.0.0-next.19
 
 ### Patch Changes
 
-- [chore] add links to repository and homepage to package.json ([#2425](https://github.com/sveltejs/kit/pull/2425))
+- chore: add links to repository and homepage to package.json ([#2425](https://github.com/sveltejs/kit/pull/2425))
 
 ## 1.0.0-next.18
 
 ### Patch Changes
 
-- [chore] export package.json from adapters ([#2351](https://github.com/sveltejs/kit/pull/2351))
+- chore: export package.json from adapters ([#2351](https://github.com/sveltejs/kit/pull/2351))
 
 ## 1.0.0-next.17
 

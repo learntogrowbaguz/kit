@@ -3,13 +3,17 @@
 	"version": "0.0.1",
 	"private": true,
 	"scripts": {
-		"dev": "../../../../kit/svelte-kit.js dev",
-		"build": "../../../../kit/svelte-kit.js build",
-		"start": "../../../../kit/svelte-kit.js start"
+		"dev": "vite dev",
+		"build": "vite build",
+		"preview": "sirv -p 5173 -s 200.html build",
+		"test": "playwright test"
 	},
 	"devDependencies": {
-		"@sveltejs/kit": "next",
-		"svelte": "^3.43.0"
+		"@sveltejs/kit": "workspace:^",
+		"@sveltejs/vite-plugin-svelte": "^3.0.1",
+		"sirv-cli": "^2.0.2",
+		"svelte": "^4.2.8",
+		"vite": "^5.0.8"
 	},
 	"type": "module"
 }

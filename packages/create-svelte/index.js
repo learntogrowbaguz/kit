@@ -1,13 +1,8 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import { mkdirp, copy, dist } from './utils.js';
 
-/**
- * Create a new SvelteKit project.
- *
- * @param {string} cwd - Path to the directory to create
- * @param {import('./types/internal').Options} options
- */
+/** @type {import('./types/index.js').create} */
 export async function create(cwd, options) {
 	mkdirp(cwd);
 
@@ -27,7 +22,7 @@ function write_template_files(template, types, name, cwd) {
 	copy(`${dir}/package.json`, `${cwd}/package.json`);
 
 	const manifest = `${dir}/files.types=${types}.json`;
-	const files = /** @type {import('./types/internal').File[]} */ (
+	const files = /** @type {import('./types/internal.js').File[]} */ (
 		JSON.parse(fs.readFileSync(manifest, 'utf-8'))
 	);
 
@@ -42,19 +37,19 @@ function write_template_files(template, types, name, cwd) {
 /**
  *
  * @param {string} cwd
- * @param {import('./types/internal').Options} options
+ * @param {import('./types/internal.js').Options} options
  * @param {string} name
  */
 function write_common_files(cwd, options, name) {
 	const shared = dist('shared.json');
-	const { files } = /** @type {import('./types/internal').Common} */ (
+	const { files } = /** @type {import('./types/internal.js').Common} */ (
 		JSON.parse(fs.readFileSync(shared, 'utf-8'))
 	);
 
 	const pkg_file = path.join(cwd, 'package.json');
 	const pkg = /** @type {any} */ (JSON.parse(fs.readFileSync(pkg_file, 'utf-8')));
 
-	files.forEach((file) => {
+	sort_files(files).forEach((file) => {
 		const include = file.include.every((condition) => matches_condition(condition, options));
 		const exclude = file.exclude.some((condition) => matches_condition(condition, options));
 
@@ -74,22 +69,22 @@ function write_common_files(cwd, options, name) {
 	pkg.devDependencies = sort_keys(pkg.devDependencies);
 	pkg.name = to_valid_package_name(name);
 
-	fs.writeFileSync(pkg_file, JSON.stringify(pkg, null, '  '));
+	fs.writeFileSync(pkg_file, JSON.stringify(pkg, null, '\t') + '\n');
 }
 
 /**
- * @param {import('./types/internal').Condition} condition
- * @param {import('./types/internal').Options} options
+ * @param {import('./types/internal.js').Condition} condition
+ * @param {import('./types/internal.js').Options} options
  * @returns {boolean}
  */
 function matches_condition(condition, options) {
-	if (condition === 'default' || condition === 'skeleton') {
+	if (condition === 'default' || condition === 'skeleton' || condition === 'skeletonlib') {
 		return options.template === condition;
 	}
 	if (condition === 'typescript' || condition === 'checkjs') {
 		return options.types === condition;
 	}
-	return options[condition];
+	return !!options[condition];
 }
 
 /**
@@ -133,6 +128,26 @@ function sort_keys(obj) {
 		});
 
 	return sorted;
+}
+
+/**
+ * Sort files so that those which apply more generically come first so they
+ * can be overwritten by files for more precise cases later.
+ *
+ * @param {import('./types/internal.js').Common['files']} files
+ */
+function sort_files(files) {
+	return files.sort((f1, f2) => {
+		const f1_more_generic =
+			f1.include.every((include) => f2.include.includes(include)) &&
+			f1.exclude.every((exclude) => f2.exclude.includes(exclude));
+		const f2_more_generic =
+			f2.include.every((include) => f1.include.includes(include)) &&
+			f2.exclude.every((exclude) => f1.exclude.includes(exclude));
+		const same = f1_more_generic && f2_more_generic;
+		const different = !f1_more_generic && !f2_more_generic;
+		return same || different ? 0 : f1_more_generic ? -1 : 1;
+	});
 }
 
 /** @param {string} name */

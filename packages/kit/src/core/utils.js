@@ -1,18 +1,27 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import colors from 'kleur';
-import { fileURLToPath } from 'url';
+import { posixify, to_fs } from '../utils/filesystem.js';
 
-export const get_runtime_path = process.env.BUNDLED
-	? /** @param {import('types').ValidatedConfig} config */ (config) =>
-			posixify_path(path.join(config.kit.outDir, 'runtime'))
-	: () => posixify_path(fileURLToPath(new URL('../runtime', import.meta.url)));
+/**
+ * Resolved path of the `runtime` directory
+ *
+ * TODO Windows issue:
+ * Vite or sth else somehow sets the driver letter inconsistently to lower or upper case depending on the run environment.
+ * In playwright debug mode run through VS Code this a root-to-lowercase conversion is needed in order for the tests to run.
+ * If we do this conversion in other cases it has the opposite effect though and fails.
+ */
+export const runtime_directory = posixify(fileURLToPath(new URL('../runtime', import.meta.url)));
 
-/** @param {string} str */
-function posixify_path(str) {
-	const parsed = path.parse(str);
-	return `/${parsed.dir.slice(parsed.root.length).split(path.sep).join('/')}/${parsed.base}`;
-}
+/**
+ * This allows us to import SvelteKit internals that aren't exposed via `pkg.exports` in a
+ * way that works whether `@sveltejs/kit` is installed inside the project's `node_modules`
+ * or in a workspace root
+ */
+export const runtime_base = runtime_directory.startsWith(process.cwd())
+	? `/${path.relative('.', runtime_directory)}`
+	: to_fs(runtime_directory);
 
 function noop() {}
 
@@ -34,35 +43,6 @@ export function logger({ verbose }) {
 	return log;
 }
 
-/**
- * Given an entry point like [cwd]/src/hooks, returns a filename like [cwd]/src/hooks.js or [cwd]/src/hooks/index.js
- * @param {string} entry
- * @returns {string|null}
- */
-export function resolve_entry(entry) {
-	if (fs.existsSync(entry)) {
-		const stats = fs.statSync(entry);
-		if (stats.isDirectory()) {
-			return resolve_entry(path.join(entry, 'index'));
-		}
-
-		return entry;
-	} else {
-		const dir = path.dirname(entry);
-
-		if (fs.existsSync(dir)) {
-			const base = path.basename(entry);
-			const files = fs.readdirSync(dir);
-
-			const found = files.find((file) => file.replace(/\.[^.]+$/, '') === base);
-
-			if (found) return path.join(dir, found);
-		}
-	}
-
-	return null;
-}
-
 /** @param {import('types').ManifestData} manifest_data */
 export function get_mime_lookup(manifest_data) {
 	/** @type {Record<string, string>} */
@@ -78,13 +58,29 @@ export function get_mime_lookup(manifest_data) {
 	return mime;
 }
 
-/** @param {import('types').ValidatedConfig} config */
-export function get_aliases(config) {
-	const alias = {
-		__GENERATED__: path.posix.join(config.kit.outDir, 'generated'),
-		$app: `${get_runtime_path(config)}/app`,
-		$lib: config.kit.files.lib
-	};
+/**
+ * @param {string} dir
+ * @param {(file: string) => boolean} [filter]
+ */
+export function list_files(dir, filter) {
+	/** @type {string[]} */
+	const files = [];
 
-	return alias;
+	/** @param {string} current */
+	function walk(current) {
+		for (const file of fs.readdirSync(path.resolve(dir, current))) {
+			const child = path.posix.join(current, file);
+			if (fs.statSync(path.resolve(dir, child)).isDirectory()) {
+				walk(child);
+			} else {
+				if (!filter || filter(child)) {
+					files.push(child);
+				}
+			}
+		}
+	}
+
+	if (fs.existsSync(dir)) walk('');
+
+	return files;
 }

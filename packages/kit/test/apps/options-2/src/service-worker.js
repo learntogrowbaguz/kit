@@ -1,4 +1,9 @@
-import { build, version } from '$service-worker';
+import { base, build, version } from '$service-worker';
+import src from './image.jpg?url';
+
+self.base = base;
+self.build = build;
+self.image_src = src;
 
 const name = `cache-${version}`;
 

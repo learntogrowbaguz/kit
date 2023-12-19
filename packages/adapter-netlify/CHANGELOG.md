@@ -1,10 +1,324 @@
 # @sveltejs/adapter-netlify
 
+## 3.0.0
+
+### Major Changes
+
+- breaking: require SvelteKit 2 ([#11316](https://github.com/sveltejs/kit/pull/11316))
+
+- chore: upgrade esbuild ([#11122](https://github.com/sveltejs/kit/pull/11122))
+
+## 2.0.8
+
+### Patch Changes
+
+- chore: upgrade to esbuild 0.18.11 ([#10330](https://github.com/sveltejs/kit/pull/10330))
+
+- Updated dependencies [[`23d1df702`](https://github.com/sveltejs/kit/commit/23d1df702f0fd77983040404352d8d83fd1dd8a1), [`486a971fe`](https://github.com/sveltejs/kit/commit/486a971fe7c375aae1585f1fa2505e28f86f4b8e)]:
+  - @sveltejs/kit@1.22.2
+
+## 2.0.7
+
+### Patch Changes
+
+- chore: update all dependencies with minor version bumps ([#9761](https://github.com/sveltejs/kit/pull/9761))
+
+## 2.0.6
+
+### Patch Changes
+
+- docs: remove comment discourage direct use of adapters ([#9344](https://github.com/sveltejs/kit/pull/9344))
+
+- Updated dependencies [[`b575287d`](https://github.com/sveltejs/kit/commit/b575287d063562868d7726f6451352aa43a63453), [`8114c658`](https://github.com/sveltejs/kit/commit/8114c658c0bc053198ff76704c002cfeb8225e2a), [`620f5605`](https://github.com/sveltejs/kit/commit/620f56058de0993e776c146db4c19fca97b9cb39), [`6a91e887`](https://github.com/sveltejs/kit/commit/6a91e887ee4c1bef8aabfafbf1ab6079113c2832), [`1c32723a`](https://github.com/sveltejs/kit/commit/1c32723a52beca0c5aa895b1114341da78d92eaf), [`0f863bbc`](https://github.com/sveltejs/kit/commit/0f863bbc957ab2ed37b04ebd839fc864b945034d), [`78b4a1bb`](https://github.com/sveltejs/kit/commit/78b4a1bb5e1ae11a894d70a0a28cc344ea0b1284), [`66b2f4ef`](https://github.com/sveltejs/kit/commit/66b2f4ef03a5dd60da2757edde4effcfdf3183cf), [`5dada256`](https://github.com/sveltejs/kit/commit/5dada256dc05674a18946f8f19db1f25ba91aeaf), [`a71b5e69`](https://github.com/sveltejs/kit/commit/a71b5e69ef37ce46e8e8590d537036cb7e267d51), [`daad7e48`](https://github.com/sveltejs/kit/commit/daad7e48b175245cbb7efd0e255263bfb52a5ee6), [`18d330b1`](https://github.com/sveltejs/kit/commit/18d330b16330d76c4b2991839c6b4462d5a4163f), [`18d7e81a`](https://github.com/sveltejs/kit/commit/18d7e81a9892e718c3cd07b2366a60f2e09561ab)]:
+  - @sveltejs/kit@1.11.0
+
+## 2.0.5
+
+### Patch Changes
+
+- chore: support newest version of undici ([#9005](https://github.com/sveltejs/kit/pull/9005))
+
+- Updated dependencies [[`6cdf54d1`](https://github.com/sveltejs/kit/commit/6cdf54d1f3561348d87f35ddc8330081919eb839)]:
+  - @sveltejs/kit@1.7.1
+
+## 2.0.4
+
+### Patch Changes
+
+- fix: Root route data endpoint redirect when using split routes ([#9006](https://github.com/sveltejs/kit/pull/9006))
+
+- Updated dependencies [[`74cfa8d5`](https://github.com/sveltejs/kit/commit/74cfa8d5f1f13f81759e20e90f4ff86a4f96040d), [`bfa2b6ec`](https://github.com/sveltejs/kit/commit/bfa2b6ec88a6d522d87c924d7c466c01e142e66e)]:
+  - @sveltejs/kit@1.5.6
+
+## 2.0.3
+
+### Patch Changes
+
+- chore: simplify functions-internal cleanup ([#8953](https://github.com/sveltejs/kit/pull/8953))
+
+- fix: correctly compare routes when generating split functions ([#8952](https://github.com/sveltejs/kit/pull/8952))
+
+- Updated dependencies [[`0abb8ebf`](https://github.com/sveltejs/kit/commit/0abb8ebffc6121f81c2bbfa0a0f68866d4cc1627), [`bef54f63`](https://github.com/sveltejs/kit/commit/bef54f63d2315066d30e8f1bcf471ddf2bd72c35), [`51cd6e64`](https://github.com/sveltejs/kit/commit/51cd6e643178e3a113fc2c3e8a63755bcbfe902d), [`930c8e4e`](https://github.com/sveltejs/kit/commit/930c8e4ee2e3046ed1b622777dafa23029a19fe5), [`ee8066fc`](https://github.com/sveltejs/kit/commit/ee8066fcb29ed1e7e3ab513cabb7997e38c984f2), [`49d2ec62`](https://github.com/sveltejs/kit/commit/49d2ec62e6385694f11701bf2fa411d07449344c), [`eb943565`](https://github.com/sveltejs/kit/commit/eb943565a4324dbed3da5a581924ca91a24366de)]:
+  - @sveltejs/kit@1.5.3
+
+## 2.0.2
+
+### Patch Changes
+
+- fix: preserve functions-internal folder so that auto-generated functions are not removed when ntl build is run ([#8899](https://github.com/sveltejs/kit/pull/8899))
+
+- Updated dependencies [[`1960296d`](https://github.com/sveltejs/kit/commit/1960296da62fdd4ad8e8bb7286940b98fbe8db0f), [`1beb19cb`](https://github.com/sveltejs/kit/commit/1beb19cb487bd6d719048f0feedcb2fbee91a005), [`b915dfe9`](https://github.com/sveltejs/kit/commit/b915dfe9d16a930246a469c9aea8c1a84e5157ba), [`a402d50b`](https://github.com/sveltejs/kit/commit/a402d50b33eba2a937d09e635275c319061ce678)]:
+  - @sveltejs/kit@1.5.1
+
+## 2.0.1
+
+### Patch Changes
+
+- chore: throw helpful migration error ([#8915](https://github.com/sveltejs/kit/pull/8915))
+
+## 2.0.0
+
+### Major Changes
+
+- breaking: bump `@sveltejs/kit` peer dependency ([#8740](https://github.com/sveltejs/kit/pull/8740))
+
+### Patch Changes
+
+- Updated dependencies [[`c7648f66`](https://github.com/sveltejs/kit/commit/c7648f6608a413e2654625cbd30f890d2148cf13), [`63613bf1`](https://github.com/sveltejs/kit/commit/63613bf194c18ce50e111585ad770fc93f9e43c7), [`d1f7655e`](https://github.com/sveltejs/kit/commit/d1f7655efdff70d91f94fe0cb0de50ed2511b5e5)]:
+  - @sveltejs/kit@1.5.0
+
+## 1.0.5
+
+### Patch Changes
+
+- chore: update link to docs for missing netlify.toml warning ([#8673](https://github.com/sveltejs/kit/pull/8673))
+
+- Updated dependencies [[`24d2efe4`](https://github.com/sveltejs/kit/commit/24d2efe4e5b641b9caacf21ba77a42f812b3b120)]:
+  - @sveltejs/kit@1.2.4
+
+## 1.0.4
+
+### Patch Changes
+
+- docs: move adapter docs to site ([#8531](https://github.com/sveltejs/kit/pull/8531))
+
+## 1.0.3
+
+### Patch Changes
+
+- fix: publish missing files ([#8532](https://github.com/sveltejs/kit/pull/8532))
+
+## 1.0.2
+
+### Patch Changes
+
+- chore: remove superfluous main field from package.json ([#8519](https://github.com/sveltejs/kit/pull/8519))
+
+- Updated dependencies [[`7e2d3405`](https://github.com/sveltejs/kit/commit/7e2d34056e99f371e22406d941b764df365a2649)]:
+  - @sveltejs/kit@1.1.1
+
+## 1.0.1
+
+### Patch Changes
+
+- docs: add note about inability to access file system at runtime ([#8441](https://github.com/sveltejs/kit/pull/8441))
+
+- Updated dependencies [[`9c01c32e`](https://github.com/sveltejs/kit/commit/9c01c32ef72bbed630fadcb8283f8f8533ced5e1), [`b6ca02a6`](https://github.com/sveltejs/kit/commit/b6ca02a684dbf13a3138b552e2d2be64697f2254), [`130abe43`](https://github.com/sveltejs/kit/commit/130abe43cef2cfbaf922aa16b20cbd4332a07c15), [`c4137536`](https://github.com/sveltejs/kit/commit/c4137536f2c6572eaeec1a82ccea0852f5be6b98), [`40464efa`](https://github.com/sveltejs/kit/commit/40464efab172a17f0b637d7dadea30d77ef1ed10), [`ce028470`](https://github.com/sveltejs/kit/commit/ce0284708184198efdd30f3ff72fd579cef830b4)]:
+  - @sveltejs/kit@1.0.12
+
+## 1.0.0
+
+### Major Changes
+
+First major release, see below for the history of changes that lead up to this.
+Starting from now all releases follow semver and changes will be listed as Major/Minor/Patch
+
+## 1.0.0-next.88
+
+### Patch Changes
+
+- chore: add peerDependencies, add more specific next version ([#8141](https://github.com/sveltejs/kit/pull/8141))
+
+## 1.0.0-next.87
+
+### Patch Changes
+
+- fix: revert platform change from browser to neutral ([#8122](https://github.com/sveltejs/kit/pull/8122))
+
+## 1.0.0-next.86
+
+### Patch Changes
+
+- fix: set esbuild platform to neutral ([#8083](https://github.com/sveltejs/kit/pull/8083))
+
+## 1.0.0-next.85
+
+### Patch Changes
+
+- update esbuild to ^0.16.3 ([#7543](https://github.com/sveltejs/kit/pull/7543))
+
+## 1.0.0-next.84
+
+### Patch Changes
+
+- Add information about edge functions and `event.platform` ([#7498](https://github.com/sveltejs/kit/pull/7498))
+
+## 1.0.0-next.83
+
+### Patch Changes
+
+- update dependencies ([#7355](https://github.com/sveltejs/kit/pull/7355))
+
+## 1.0.0-next.82
+
+### Patch Changes
+
+- Drop CJS version of adapter-netlify ([#7401](https://github.com/sveltejs/kit/pull/7401))
+
+## 1.0.0-next.81
+
+### Patch Changes
+
+- Use config.kit.paths.base prefix for static assets ([#4448](https://github.com/sveltejs/kit/pull/4448))
+
+## 1.0.0-next.80
+
+### Patch Changes
+
+- Transfer server data as devalue-encoded JSON ([#7177](https://github.com/sveltejs/kit/pull/7177))
+
+## 1.0.0-next.79
+
+### Patch Changes
+
+- fix: clear out build directory when running `adapter-netlify` ([#7159](https://github.com/sveltejs/kit/pull/7159))
+
+## 1.0.0-next.78
+
+### Patch Changes
+
+- chore: bump esbuild ([#6829](https://github.com/sveltejs/kit/pull/6829))
+
+## 1.0.0-next.77
+
+### Patch Changes
+
+- Update to esbuild 0.15 ([#6740](https://github.com/sveltejs/kit/pull/6740))
+- feat: only generate ESM functions ([#6760](https://github.com/sveltejs/kit/pull/6760))
+
+## 1.0.0-next.76
+
+### Patch Changes
+
+- Update adapter to only glob files ([#6492](https://github.com/sveltejs/kit/pull/6492))
+
+## 1.0.0-next.75
+
+### Patch Changes
+
+- Use devalue to serialize server-only `load` return values ([#6318](https://github.com/sveltejs/kit/pull/6318))
+
+## 1.0.0-next.74
+
+### Patch Changes
+
+- Don't use top-level-await, as it is not supported right now ([#6360](https://github.com/sveltejs/kit/pull/6360))
+
+## 1.0.0-next.73
+
+### Patch Changes
+
+- Run `server.init()` for edge functions ([#6327](https://github.com/sveltejs/kit/pull/6327))
+
+## 1.0.0-next.72
+
+### Patch Changes
+
+- feat: Moved hooks.js initialization from Server.respond into Server.init ([#6179](https://github.com/sveltejs/kit/pull/6179))
+
+## 1.0.0-next.71
+
+### Patch Changes
+
+- Initialise `env` ([#5663](https://github.com/sveltejs/kit/pull/5663))
+
+## 1.0.0-next.70
+
+### Patch Changes
+
+- breaking: remove writeStatic to align with Vite ([#5618](https://github.com/sveltejs/kit/pull/5618))
+
+## 1.0.0-next.69
+
+### Patch Changes
+
+- Update dependencies ([#5005](https://github.com/sveltejs/kit/pull/5005))
+
+## 1.0.0-next.68
+
+### Patch Changes
+
+- feat: get client IP from Context object rather than the request header ([#5473](https://github.com/sveltejs/kit/pull/5473))
+
+## 1.0.0-next.67
+
+### Patch Changes
+
+- chore: upgrade TypeScript to 4.7.4 ([#5414](https://github.com/sveltejs/kit/pull/5414))
+
+## 1.0.0-next.66
+
+### Patch Changes
+
+- Generate sourcemaps for server-side functions when bundling with esbuild ([#5258](https://github.com/sveltejs/kit/pull/5258))
+
+## 1.0.0-next.65
+
+### Patch Changes
+
+- fix: add redirects for routes containing `__data.json` suffix ([#5180](https://github.com/sveltejs/kit/pull/5180))
+
+## 1.0.0-next.64
+
+### Patch Changes
+
+- Update dependencies ([#5121](https://github.com/sveltejs/kit/pull/5121))
+
+## 1.0.0-next.63
+
+### Patch Changes
+
+- Update adapter entrypoint typings to be NodeNext/ESNext-compatible ([#5111](https://github.com/sveltejs/kit/pull/5111))
+
+## 1.0.0-next.62
+
+### Patch Changes
+
+- only serve `_app/immutable` with immutable cache header, not `_app/version.json` ([#5051](https://github.com/sveltejs/kit/pull/5051))
+
+## 1.0.0-next.61
+
+### Patch Changes
+
+- Add types to pkg.exports ([#5045](https://github.com/sveltejs/kit/pull/5045))
+
+## 1.0.0-next.60
+
+### Patch Changes
+
+- Encode binary responses as base64 ([#5048](https://github.com/sveltejs/kit/pull/5048))
+
+## 1.0.0-next.59
+
+### Patch Changes
+
+- breaking: replace @sveltejs/kit/install-fetch with @sveltejs/kit/node/polyfills ([#4934](https://github.com/sveltejs/kit/pull/4934))
+
 ## 1.0.0-next.58
 
 ### Patch Changes
 
-- [docs] explain how to change node version ([#4921](https://github.com/sveltejs/kit/pull/4921))
+- docs: explain how to change node version ([#4921](https://github.com/sveltejs/kit/pull/4921))
 
 ## 1.0.0-next.57
 
@@ -16,7 +330,7 @@
 
 ### Patch Changes
 
-- [breaking] Remove try-catch around server.respond ([#4738](https://github.com/sveltejs/kit/pull/4738))
+- breaking: Remove try-catch around server.respond ([#4738](https://github.com/sveltejs/kit/pull/4738))
 
 ## 1.0.0-next.55
 
@@ -52,7 +366,7 @@
 
 ### Patch Changes
 
-- [breaking] replace builder.prerender() with builder.writePrerendered() and builder.prerendered ([#4192](https://github.com/sveltejs/kit/pull/4192)) ([#4229](https://github.com/sveltejs/kit/pull/4229))
+- breaking: replace builder.prerender() with builder.writePrerendered() and builder.prerendered ([#4192](https://github.com/sveltejs/kit/pull/4192)) ([#4229](https://github.com/sveltejs/kit/pull/4229))
 
 ## 1.0.0-next.49
 
@@ -76,7 +390,7 @@
 
 ### Patch Changes
 
-- [breaking] rename `app.render` to `server.respond` ([#4034](https://github.com/sveltejs/kit/pull/4034))
+- breaking: rename `app.render` to `server.respond` ([#4034](https://github.com/sveltejs/kit/pull/4034))
 
 ## 1.0.0-next.45
 
@@ -131,12 +445,9 @@
 ### Patch Changes
 
 - Overhaul adapter API ([#2931](https://github.com/sveltejs/kit/pull/2931))
-
-* Update adapters to provide app.render with a url ([#3133](https://github.com/sveltejs/kit/pull/3133))
-
+- Update adapters to provide app.render with a url ([#3133](https://github.com/sveltejs/kit/pull/3133))
 - Add experimental function splitting ([#2931](https://github.com/sveltejs/kit/pull/2931))
-
-* Don't bundle final output ([#2931](https://github.com/sveltejs/kit/pull/2931))
+- Don't bundle final output ([#2931](https://github.com/sveltejs/kit/pull/2931))
 
 ## 1.0.0-next.36
 
@@ -148,13 +459,13 @@
 
 ### Patch Changes
 
-- [fix] adapter-netlify: handle undefined body ([#2682](https://github.com/sveltejs/kit/pull/2682))
+- fix: adapter-netlify: handle undefined body ([#2682](https://github.com/sveltejs/kit/pull/2682))
 
 ## 1.0.0-next.34
 
 ### Patch Changes
 
-- [fix] encode UInt8Array response bodies as base64 ([#2630](https://github.com/sveltejs/kit/pull/2630))
+- fix: encode UInt8Array response bodies as base64 ([#2630](https://github.com/sveltejs/kit/pull/2630))
 
 ## 1.0.0-next.33
 
@@ -172,13 +483,13 @@
 
 ### Patch Changes
 
-- [chore] add links to repository and homepage to package.json ([#2425](https://github.com/sveltejs/kit/pull/2425))
+- chore: add links to repository and homepage to package.json ([#2425](https://github.com/sveltejs/kit/pull/2425))
 
 ## 1.0.0-next.30
 
 ### Patch Changes
 
-- [chore] export package.json from adapters ([#2351](https://github.com/sveltejs/kit/pull/2351))
+- chore: export package.json from adapters ([#2351](https://github.com/sveltejs/kit/pull/2351))
 
 ## 1.0.0-next.29
 

@@ -1,6 +1,6 @@
 import './shims';
 import { Server } from '0SERVER';
-import { split_headers } from './headers';
+import { split_headers } from './headers.js';
 
 /**
  * @param {import('@sveltejs/kit').SSRManifest} manifest
@@ -9,8 +9,17 @@ import { split_headers } from './headers';
 export function init(manifest) {
 	const server = new Server(manifest);
 
+	let init_promise = server.init({
+		env: process.env
+	});
+
 	return async (event, context) => {
-		const rendered = await server.respond(to_request(event), {
+		if (init_promise !== null) {
+			await init_promise;
+			init_promise = null;
+		}
+
+		const response = await server.respond(to_request(event), {
 			platform: { context },
 			getClientAddress() {
 				return event.headers['x-nf-client-connection-ip'];
@@ -18,25 +27,24 @@ export function init(manifest) {
 		});
 
 		const partial_response = {
-			statusCode: rendered.status,
-			...split_headers(rendered.headers)
+			statusCode: response.status,
+			...split_headers(response.headers)
 		};
 
-		// TODO this is probably wrong now?
-		if (rendered.body instanceof Uint8Array) {
+		if (!is_text(response.headers.get('content-type'))) {
 			// Function responses should be strings (or undefined), and responses with binary
 			// content should be base64 encoded and set isBase64Encoded to true.
 			// https://github.com/netlify/functions/blob/main/src/function/response.ts
 			return {
 				...partial_response,
 				isBase64Encoded: true,
-				body: Buffer.from(rendered.body).toString('base64')
+				body: Buffer.from(await response.arrayBuffer()).toString('base64')
 			};
 		}
 
 		return {
 			...partial_response,
-			body: await rendered.text()
+			body: await response.text()
 		};
 	};
 }
@@ -60,4 +68,24 @@ function to_request(event) {
 	}
 
 	return new Request(rawUrl, init);
+}
+
+const text_types = new Set([
+	'application/xml',
+	'application/json',
+	'application/x-www-form-urlencoded',
+	'multipart/form-data'
+]);
+
+/**
+ * Decides how the body should be parsed based on its mime type
+ *
+ * @param {string | undefined | null} content_type The `content-type` header of a request/response.
+ * @returns {boolean}
+ */
+function is_text(content_type) {
+	if (!content_type) return true; // defaults to json
+	const type = content_type.split(';')[0].toLowerCase(); // get the mime type
+
+	return type.startsWith('text/') || type.endsWith('+xml') || text_types.has(type);
 }

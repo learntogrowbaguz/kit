@@ -3,6 +3,7 @@
 	"singleQuote": true,
 	"trailingComma": "none",
 	"printWidth": 100,
+	"plugins": ["prettier-plugin-svelte"],
 	"overrides": [
 		{
 			"files": ["*.svelte"],
@@ -20,10 +21,14 @@
 		{
 			"files": [
 				"**/CHANGELOG.md",
-				"packages/kit/src/packaging/test/fixtures/**/expected/**/*",
-				"packages/kit/src/packaging/test/watch/expected/**/*",
-				"packages/kit/src/packaging/test/watch/package/**/*",
-				"packages/kit/src/core/build/prerender/fixtures/**/*"
+				"**/vite.config.js.timestamp-*",
+				"**/.svelte-kit/**",
+				"documentation/**/*.md",
+				"packages/package/test/fixtures/**/expected/**/*",
+				"packages/package/test/watch/expected/**/*",
+				"packages/package/test/watch/package/**/*",
+				"packages/kit/src/core/postbuild/fixtures/**/*",
+				"packages/migrate/migrations/routes/*/samples.md"
 			],
 			"options": {
 				"requirePragma": true

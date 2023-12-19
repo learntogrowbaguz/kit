@@ -1,9 +1,9 @@
-import { existsSync, readFileSync, writeFileSync } from 'fs';
-import { posix, dirname } from 'path';
-import { execSync } from 'child_process';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { posix, dirname } from 'node:path';
+import { execSync } from 'node:child_process';
 import esbuild from 'esbuild';
 import toml from '@iarna/toml';
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from 'node:url';
 
 /**
  * @typedef {{
@@ -14,13 +14,13 @@ import { fileURLToPath } from 'url';
  * }} WranglerConfig
  */
 
-/** @type {import('.')} */
-export default function (options = {}) {
+/** @type {import('./index.js').default} */
+export default function ({ config = 'wrangler.toml' } = {}) {
 	return {
 		name: '@sveltejs/adapter-cloudflare-workers',
 
 		async adapt(builder) {
-			const { main, site } = validate_config(builder);
+			const { main, site } = validate_config(builder, config);
 
 			const files = fileURLToPath(new URL('./files', import.meta.url).href);
 			const tmp = builder.getBuildDirectory('cloudflare-workers-tmp');
@@ -45,61 +45,73 @@ export default function (options = {}) {
 				}
 			});
 
+			let prerendered_entries = Array.from(builder.prerendered.pages.entries());
+
+			if (builder.config.kit.paths.base) {
+				prerendered_entries = prerendered_entries.map(([path, { file }]) => [
+					path,
+					{ file: `${builder.config.kit.paths.base}/${file}` }
+				]);
+			}
+
 			writeFileSync(
 				`${tmp}/manifest.js`,
 				`export const manifest = ${builder.generateManifest({
 					relativePath
-				})};\n\nexport const prerendered = new Map(${JSON.stringify(
-					Array.from(builder.prerendered.pages.entries())
-				)});\n`
+				})};\n\nexport const prerendered = new Map(${JSON.stringify(prerendered_entries)});\n`
 			);
 
 			await esbuild.build({
-				target: 'es2020',
 				platform: 'browser',
-				...options,
+				conditions: ['worker', 'browser'],
+				sourcemap: 'linked',
+				target: 'es2022',
 				entryPoints: [`${tmp}/entry.js`],
 				outfile: main,
 				bundle: true,
-				external: ['__STATIC_CONTENT_MANIFEST', ...(options?.external || [])],
-				format: 'esm'
+				external: ['__STATIC_CONTENT_MANIFEST', 'cloudflare:*'],
+				format: 'esm',
+				loader: {
+					'.wasm': 'copy'
+				}
 			});
 
 			builder.log.minor('Copying assets...');
-			builder.writeClient(site.bucket);
-			builder.writeStatic(site.bucket);
-			builder.writePrerendered(site.bucket);
+			const bucket_dir = `${site.bucket}${builder.config.kit.paths.base}`;
+			builder.writeClient(bucket_dir);
+			builder.writePrerendered(bucket_dir);
 		}
 	};
 }
 
 /**
  * @param {import('@sveltejs/kit').Builder} builder
+ * @param {string} config_file
  * @returns {WranglerConfig}
  */
-function validate_config(builder) {
-	if (existsSync('wrangler.toml')) {
+function validate_config(builder, config_file) {
+	if (existsSync(config_file)) {
 		/** @type {WranglerConfig} */
 		let wrangler_config;
 
 		try {
 			wrangler_config = /** @type {WranglerConfig} */ (
-				toml.parse(readFileSync('wrangler.toml', 'utf-8'))
+				toml.parse(readFileSync(config_file, 'utf-8'))
 			);
 		} catch (err) {
-			err.message = `Error parsing wrangler.toml: ${err.message}`;
+			err.message = `Error parsing ${config_file}: ${err.message}`;
 			throw err;
 		}
 
 		if (!wrangler_config.site?.bucket) {
 			throw new Error(
-				'You must specify site.bucket in wrangler.toml. Consult https://developers.cloudflare.com/workers/platform/sites/configuration'
+				`You must specify site.bucket in ${config_file}. Consult https://developers.cloudflare.com/workers/platform/sites/configuration`
 			);
 		}
 
 		if (!wrangler_config.main) {
 			throw new Error(
-				'You must specify main option in wrangler.toml. Consult https://github.com/sveltejs/kit/tree/master/packages/adapter-cloudflare-workers'
+				`You must specify main option in ${config_file}. Consult https://github.com/sveltejs/kit/tree/master/packages/adapter-cloudflare-workers`
 			);
 		}
 
@@ -116,7 +128,6 @@ function validate_config(builder) {
 
 		name = "<your-site-name>"
 		account_id = "<your-account-id>"
-		route = "<your-route>"
 
 		main = "./.cloudflare/worker.js"
 		site.bucket = "./.cloudflare/public"
@@ -129,5 +140,5 @@ function validate_config(builder) {
 			.trim()
 	);
 
-	throw new Error('Missing a wrangler.toml file');
+	throw new Error(`Missing a ${config_file} file`);
 }

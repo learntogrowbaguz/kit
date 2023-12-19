@@ -1,6 +1,40 @@
-import { join } from 'path';
+import { join } from 'node:path';
 
-/** @typedef {import('./types').Validator} Validator */
+/** @typedef {import('./types.js').Validator} Validator */
+
+const directives = object({
+	'child-src': string_array(),
+	'default-src': string_array(),
+	'frame-src': string_array(),
+	'worker-src': string_array(),
+	'connect-src': string_array(),
+	'font-src': string_array(),
+	'img-src': string_array(),
+	'manifest-src': string_array(),
+	'media-src': string_array(),
+	'object-src': string_array(),
+	'prefetch-src': string_array(),
+	'script-src': string_array(),
+	'script-src-elem': string_array(),
+	'script-src-attr': string_array(),
+	'style-src': string_array(),
+	'style-src-elem': string_array(),
+	'style-src-attr': string_array(),
+	'base-uri': string_array(),
+	sandbox: string_array(),
+	'form-action': string_array(),
+	'frame-ancestors': string_array(),
+	'navigate-to': string_array(),
+	'report-uri': string_array(),
+	'report-to': string_array(),
+	'require-trusted-types-for': string_array(),
+	'trusted-types': string_array(),
+	'upgrade-insecure-requests': boolean(false),
+	'require-sri-for': string_array(),
+	'block-all-mixed-content': boolean(false),
+	'plugin-types': string_array(),
+	referrer: string_array()
+});
 
 /** @type {Validator} */
 const options = object(
@@ -39,7 +73,17 @@ const options = object(
 				return input;
 			}),
 
-			amp: boolean(false),
+			alias: validate({}, (input, keypath) => {
+				if (typeof input !== 'object') {
+					throw new Error(`${keypath} should be an object`);
+				}
+
+				for (const key in input) {
+					assert_string(input[key], `${keypath}.${key}`);
+				}
+
+				return input;
+			}),
 
 			appDir: validate('_app', (input, keypath) => {
 				assert_string(input, keypath);
@@ -57,102 +101,46 @@ const options = object(
 				return input;
 			}),
 
-			browser: object({
-				hydrate: boolean(true),
-				router: boolean(true)
-			}),
-
 			csp: object({
 				mode: list(['auto', 'hash', 'nonce']),
-				directives: object({
-					'child-src': string_array(),
-					'default-src': string_array(),
-					'frame-src': string_array(),
-					'worker-src': string_array(),
-					'connect-src': string_array(),
-					'font-src': string_array(),
-					'img-src': string_array(),
-					'manifest-src': string_array(),
-					'media-src': string_array(),
-					'object-src': string_array(),
-					'prefetch-src': string_array(),
-					'script-src': string_array(),
-					'script-src-elem': string_array(),
-					'script-src-attr': string_array(),
-					'style-src': string_array(),
-					'style-src-elem': string_array(),
-					'style-src-attr': string_array(),
-					'base-uri': string_array(),
-					sandbox: string_array(),
-					'form-action': string_array(),
-					'frame-ancestors': string_array(),
-					'navigate-to': string_array(),
-					'report-uri': string_array(),
-					'report-to': string_array(),
-					'require-trusted-types-for': string_array(),
-					'trusted-types': string_array(),
-					'upgrade-insecure-requests': boolean(false),
-					'require-sri-for': string_array(),
-					'block-all-mixed-content': boolean(false),
-					'plugin-types': string_array(),
-					referrer: string_array()
-				})
+				directives,
+				reportOnly: directives
 			}),
 
-			endpointExtensions: string_array(['.js', '.ts']),
+			csrf: object({
+				checkOrigin: boolean(true)
+			}),
+
+			embedded: boolean(false),
+
+			env: object({
+				dir: string(process.cwd()),
+				publicPrefix: string('PUBLIC_'),
+				privatePrefix: string('')
+			}),
 
 			files: object({
 				assets: string('static'),
-				hooks: string(join('src', 'hooks')),
+				hooks: object({
+					client: string(join('src', 'hooks.client')),
+					server: string(join('src', 'hooks.server'))
+				}),
 				lib: string(join('src', 'lib')),
 				params: string(join('src', 'params')),
 				routes: string(join('src', 'routes')),
 				serviceWorker: string(join('src', 'service-worker')),
-				template: string(join('src', 'app.html'))
+				appTemplate: string(join('src', 'app.html')),
+				errorTemplate: string(join('src', 'error.html'))
 			}),
-
-			floc: boolean(false),
-
-			// TODO: remove this for the 1.0 release
-			headers: error(
-				(keypath) =>
-					`${keypath} has been removed. See https://github.com/sveltejs/kit/pull/3384 for details`
-			),
-
-			// TODO: remove this for the 1.0 release
-			host: error(
-				(keypath) =>
-					`${keypath} has been removed. See https://github.com/sveltejs/kit/pull/3384 for details`
-			),
-
-			// TODO remove for 1.0
-			hydrate: error((keypath) => `${keypath} has been moved to config.kit.browser.hydrate`),
 
 			inlineStyleThreshold: number(0),
 
-			methodOverride: object({
-				parameter: string('_method'),
-				allowed: validate([], (input, keypath) => {
-					if (!Array.isArray(input) || !input.every((method) => typeof method === 'string')) {
-						throw new Error(`${keypath} must be an array of strings`);
-					}
-
-					if (input.map((i) => i.toUpperCase()).includes('GET')) {
-						throw new Error(`${keypath} cannot contain "GET"`);
-					}
-
-					return input;
-				})
-			}),
+			moduleExtensions: string_array(['.js', '.ts']),
 
 			outDir: string('.svelte-kit'),
 
-			package: object({
-				dir: string('package'),
-				// excludes all .d.ts and filename starting with _
-				exports: fun((filepath) => !/^_|\/_|\.d\.ts$/.test(filepath)),
-				files: fun(() => true),
-				emitTypes: boolean(true)
+			output: object({
+				preloadStrategy: list(['modulepreload', 'preload-js', 'preload-mjs'], 'modulepreload')
 			}),
 
 			paths: object({
@@ -185,18 +173,13 @@ const options = object(
 					}
 
 					return input;
-				})
+				}),
+				relative: boolean(true)
 			}),
 
 			prerender: object({
 				concurrency: number(1),
 				crawl: boolean(true),
-				createIndexFiles: error(
-					(keypath) =>
-						`${keypath} has been removed — it is now controlled by the trailingSlash option. See https://kit.svelte.dev/docs/configuration#trailingslash`
-				),
-				default: boolean(false),
-				enabled: boolean(true),
 				entries: validate(['*'], (input, keypath) => {
 					if (!Array.isArray(input) || !input.every((page) => typeof page === 'string')) {
 						throw new Error(`${keypath} must be an array of strings`);
@@ -213,80 +196,80 @@ const options = object(
 					return input;
 				}),
 
-				// TODO: remove this for the 1.0 release
-				force: validate(undefined, (input, keypath) => {
-					if (typeof input !== undefined) {
-						const newSetting = input ? 'continue' : 'fail';
-						const needsSetting = newSetting === 'continue';
+				handleHttpError: validate(
+					(/** @type {any} */ { message }) => {
 						throw new Error(
-							`${keypath} has been removed in favor of \`onError\`. In your case, set \`onError\` to "${newSetting}"${
-								needsSetting ? '' : ' (or leave it undefined)'
-							} to get the same behavior as you would with \`force: ${JSON.stringify(input)}\``
+							message +
+								'\nTo suppress or handle this error, implement `handleHttpError` in https://kit.svelte.dev/docs/configuration#prerender'
 						);
+					},
+					(input, keypath) => {
+						if (typeof input === 'function') return input;
+						if (['fail', 'warn', 'ignore'].includes(input)) return input;
+						throw new Error(`${keypath} should be "fail", "warn", "ignore" or a custom function`);
 					}
-				}),
+				),
 
-				onError: validate('fail', (input, keypath) => {
-					if (typeof input === 'function') return input;
-					if (['continue', 'fail'].includes(input)) return input;
-					throw new Error(
-						`${keypath} should be either a custom function or one of "continue" or "fail"`
-					);
-				}),
+				handleMissingId: validate(
+					(/** @type {any} */ { message }) => {
+						throw new Error(
+							message +
+								'\nTo suppress or handle this error, implement `handleMissingId` in https://kit.svelte.dev/docs/configuration#prerender'
+						);
+					},
+					(input, keypath) => {
+						if (typeof input === 'function') return input;
+						if (['fail', 'warn', 'ignore'].includes(input)) return input;
+						throw new Error(`${keypath} should be "fail", "warn", "ignore" or a custom function`);
+					}
+				),
 
-				// TODO: remove this for the 1.0 release
-				pages: error((keypath) => `${keypath} has been renamed to \`entries\`.`)
+				handleEntryGeneratorMismatch: validate(
+					(/** @type {any} */ { message }) => {
+						throw new Error(
+							message +
+								'\nTo suppress or handle this error, implement `handleEntryGeneratorMismatch` in https://kit.svelte.dev/docs/configuration#prerender'
+						);
+					},
+					(input, keypath) => {
+						if (typeof input === 'function') return input;
+						if (['fail', 'warn', 'ignore'].includes(input)) return input;
+						throw new Error(`${keypath} should be "fail", "warn", "ignore" or a custom function`);
+					}
+				),
+
+				origin: validate('http://sveltekit-prerender', (input, keypath) => {
+					assert_string(input, keypath);
+
+					let origin;
+
+					try {
+						origin = new URL(input).origin;
+					} catch (e) {
+						throw new Error(`${keypath} must be a valid origin`);
+					}
+
+					if (input !== origin) {
+						throw new Error(`${keypath} must be a valid origin (${origin} rather than ${input})`);
+					}
+
+					return origin;
+				})
 			}),
-
-			// TODO: remove this for the 1.0 release
-			protocol: error(
-				(keypath) =>
-					`${keypath} has been removed. See https://github.com/sveltejs/kit/pull/3384 for details`
-			),
-
-			// TODO remove for 1.0
-			router: error((keypath) => `${keypath} has been moved to config.kit.browser.router`),
-
-			routes: fun((filepath) => !/(?:(?:^_|\/_)|(?:^\.|\/\.)(?!well-known))/.test(filepath)),
 
 			serviceWorker: object({
 				register: boolean(true),
 				files: fun((filename) => !/\.DS_Store/.test(filename))
 			}),
 
-			// TODO remove this for 1.0
-			ssr: error(
-				(keypath) =>
-					`${keypath} has been removed — use the handle hook instead: https://kit.svelte.dev/docs/hooks#handle'`
-			),
-
-			// TODO remove this for 1.0
-			target: error((keypath) => `${keypath} is no longer required, and should be removed`),
-
-			trailingSlash: list(['never', 'always', 'ignore']),
+			typescript: object({
+				config: fun((config) => config)
+			}),
 
 			version: object({
 				name: string(Date.now().toString()),
 				pollInterval: number(0)
-			}),
-
-			vite: validate(
-				() => ({}),
-				(input, keypath) => {
-					if (typeof input === 'object') {
-						const config = input;
-						input = () => config;
-					}
-
-					if (typeof input !== 'function') {
-						throw new Error(
-							`${keypath} must be a Vite config object (https://vitejs.dev/config) or a function that returns one`
-						);
-					}
-
-					return input;
-				}
-			)
+			})
 		})
 	},
 	true
@@ -366,8 +349,6 @@ function string(fallback, allow_empty = true) {
  */
 function string_array(fallback) {
 	return validate(fallback, (input, keypath) => {
-		if (input === undefined) return input;
-
 		if (!Array.isArray(input) || input.some((value) => typeof value !== 'string')) {
 			throw new Error(`${keypath} must be an array of strings, if specified`);
 		}
@@ -421,7 +402,7 @@ function list(options, fallback = options[0]) {
 }
 
 /**
- * @param {(filename: string) => boolean} fallback
+ * @param {(...args: any) => any} fallback
  * @returns {Validator}
  */
 function fun(fallback) {
@@ -441,15 +422,6 @@ function assert_string(input, keypath) {
 	if (typeof input !== 'string') {
 		throw new Error(`${keypath} should be a string, if specified`);
 	}
-}
-
-/** @param {(keypath?: string) => string} fn */
-function error(fn) {
-	return validate(undefined, (input, keypath) => {
-		if (input !== undefined) {
-			throw new Error(fn(keypath));
-		}
-	});
 }
 
 export default options;

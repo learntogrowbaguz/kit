@@ -6,33 +6,40 @@ import {
 	PlaywrightWorkerOptions,
 	TestType
 } from '@playwright/test';
-import { IncomingMessage, Server, ServerResponse } from 'http';
+import { IncomingMessage, ServerResponse } from 'http';
+import { Plugin } from 'vite';
 
 export const test: TestType<
 	PlaywrightTestArgs &
 		PlaywrightTestOptions & {
 			app: {
-				goto: (url: string, opts?: { replaceState?: boolean }) => Promise<void>;
-				invalidate: (url: string) => Promise<void>;
-				beforeNavigate: (url: URL) => void | boolean;
-				afterNavigate: (url: URL) => void;
-				prefetch: (url: string) => Promise<void>;
-				prefetchRoutes: (urls: string[]) => Promise<void>;
+				goto(url: string, opts?: { replaceState?: boolean }): Promise<void>;
+				invalidate(url: string): Promise<void>;
+				beforeNavigate(url: URL): void | boolean;
+				afterNavigate(url: URL): void;
+				preloadCode(...urls: string[]): Promise<void>;
+				preloadData(url: string): Promise<void>;
 			};
-			back: () => Promise<void>;
-			clicknav: (selector: string, options?: { timeout?: number }) => Promise<void>;
-			in_view: (selector: string) => Promise<boolean>;
-			read_errors: (href: string) => string;
+			clicknav(selector: string, options?: { timeout?: number }): Promise<void>;
+			in_view(selector: string): Promise<boolean>;
+			get_computed_style(selector: string, prop: string): Promise<string>;
+			/**
+			 * `handleError` defines the shape
+			 */
+			read_errors(href: string): Record<string, any>;
+			start_server(
+				handler: (req: IncomingMessage, res: ServerResponse) => void
+			): Promise<{ port: number }>;
+			page: PlaywrightTestArgs['page'] & {
+				goto: (
+					url: string,
+					opts?: Parameters<PlaywrightTestArgs['page']['goto']>[1] & { wait_for_started?: boolean }
+				) => ReturnType<PlaywrightTestArgs['page']['goto']>;
+			};
 		},
 	PlaywrightWorkerArgs & PlaywrightWorkerOptions
 >;
 
 export const config: PlaywrightTestConfig;
 
-export const start_server: (
-	handler: (req: IncomingMessage, res: ServerResponse) => void,
-	start?: number
-) => {
-	server: Server;
-	port: number;
-};
+export const plugin: () => Plugin;

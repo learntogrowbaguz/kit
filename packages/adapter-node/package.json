@@ -1,6 +1,7 @@
 {
 	"name": "@sveltejs/adapter-node",
-	"version": "1.0.0-next.73",
+	"version": "2.0.0",
+	"description": "Adapter for SvelteKit apps that generates a standalone Node server",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/sveltejs/kit",
@@ -11,42 +12,44 @@
 	"type": "module",
 	"exports": {
 		".": {
+			"types": "./index.d.ts",
 			"import": "./index.js"
 		},
 		"./package.json": "./package.json"
 	},
-	"main": "index.js",
 	"types": "index.d.ts",
 	"files": [
 		"files",
+		"index.js",
 		"index.d.ts"
 	],
 	"scripts": {
-		"dev": "rimraf files && rollup -cw",
-		"build": "rimraf files && rollup -c",
-		"test": "echo \"tests temporarily disabled\" # c8 uvu tests",
+		"dev": "node -e \"fs.rmSync('files', { force: true, recursive: true })\" && rollup -cw",
+		"build": "node -e \"fs.rmSync('files', { force: true, recursive: true })\" && rollup -c",
+		"test": "echo \"tests temporarily disabled\" # c8 vitest run",
 		"check": "tsc",
-		"lint": "eslint --ignore-path .gitignore \"**/*.{ts,js,svelte}\" && npm run check-format",
-		"format": "npm run check-format -- --write",
-		"check-format": "prettier --check . --config ../../.prettierrc --ignore-path .gitignore",
-		"prepublishOnly": "npm run build"
-	},
-	"dependencies": {
-		"tiny-glob": "^0.2.9"
+		"lint": "prettier --check .",
+		"format": "pnpm lint --write",
+		"prepublishOnly": "pnpm build"
 	},
 	"devDependencies": {
-		"@rollup/plugin-json": "^4.1.0",
-		"@sveltejs/kit": "workspace:*",
-		"@types/compression": "^1.7.2",
-		"@types/node": "^14.14.20",
-		"c8": "^7.10.0",
-		"compression": "^1.7.4",
-		"node-fetch": "^3.1.0",
-		"polka": "^1.0.0-next.22",
-		"rimraf": "^3.0.2",
-		"rollup": "^2.60.2",
-		"sirv": "^2.0.0",
-		"typescript": "^4.6.2",
-		"uvu": "^0.5.2"
+		"@polka/url": "1.0.0-next.24",
+		"@sveltejs/kit": "workspace:^",
+		"@sveltejs/vite-plugin-svelte": "^3.0.1",
+		"@types/node": "^18.19.3",
+		"c8": "^8.0.1",
+		"polka": "1.0.0-next.24",
+		"sirv": "^2.0.3",
+		"typescript": "^5.3.3",
+		"vitest": "^1.0.4"
+	},
+	"dependencies": {
+		"@rollup/plugin-commonjs": "^25.0.7",
+		"@rollup/plugin-json": "^6.1.0",
+		"@rollup/plugin-node-resolve": "^15.2.3",
+		"rollup": "^4.8.0"
+	},
+	"peerDependencies": {
+		"@sveltejs/kit": "^2.0.0"
 	}
 }

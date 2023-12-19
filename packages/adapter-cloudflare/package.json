@@ -1,6 +1,7 @@
 {
 	"name": "@sveltejs/adapter-cloudflare",
-	"version": "1.0.0-next.19",
+	"version": "3.0.0",
+	"description": "Adapter for building SvelteKit applications on Cloudflare Pages with Workers integration",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/sveltejs/kit",
@@ -11,6 +12,7 @@
 	"type": "module",
 	"exports": {
 		".": {
+			"types": "./index.d.ts",
 			"import": "./index.js"
 		},
 		"./package.json": "./package.json"
@@ -19,25 +21,29 @@
 	"files": [
 		"files",
 		"index.js",
-		"index.d.ts"
+		"index.d.ts",
+		"ambient.d.ts"
 	],
-	"main": "index.js",
 	"scripts": {
 		"build": "esbuild src/worker.js --bundle --outfile=files/worker.js --external:SERVER --external:MANIFEST --format=esm",
-		"lint": "eslint --ignore-path .gitignore \"**/*.{ts,js,svelte}\" && npm run check-format",
-		"format": "npm run check-format -- --write",
+		"lint": "prettier --check .",
+		"format": "pnpm lint --write",
 		"check": "tsc --skipLibCheck",
-		"check-format": "prettier --check . --config ../../.prettierrc --ignore-path .gitignore",
-		"prepublishOnly": "npm run build"
+		"prepublishOnly": "pnpm build"
 	},
 	"dependencies": {
-		"esbuild": "^0.14.29",
-		"worktop": "0.8.0-next.14"
+		"@cloudflare/workers-types": "^4.20231121.0",
+		"esbuild": "^0.19.9",
+		"worktop": "0.8.0-next.15"
 	},
 	"devDependencies": {
-		"@types/node": "^14.14.20",
-		"@types/ws": "^8.5.3",
-		"typescript": "^4.6.2"
+		"@sveltejs/kit": "workspace:^",
+		"@types/node": "^18.19.3",
+		"@types/ws": "^8.5.10",
+		"typescript": "^5.3.3"
+	},
+	"peerDependencies": {
+		"@sveltejs/kit": "^2.0.0"
 	},
 	"publishConfig": {
 		"access": "public"
